@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · CAR DAMAGE DETECTION</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+<style>
+/* ── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after {
+  margin: 0; padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+:root {
+  --sky:      #38bdf8;
+  --sky-glow: rgba(56,189,248,0.18);
+  --sky-dim:  rgba(56,189,248,0.07);
+  --bg:       #080e1a;
+  --card:     rgba(255,255,255,0.045);
+  --border:   rgba(255,255,255,0.08);
+  --border-b: rgba(56,189,248,0.35);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: #f1f5f9;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Deep space background ─────────────────────────────── */
+.bg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  background:
+    radial-gradient(ellipse 70% 60% at 15% 10%, rgba(56,189,248,0.06) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 50% at 85% 90%, rgba(14,165,233,0.05) 0%, transparent 65%),
+    #080e1a;
+}
+
+/* Grid */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-image:
+    linear-gradient(rgba(56,189,248,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  animation: gridPan 60s linear infinite;
+}
+
+@keyframes gridPan {
+  from { background-position: 0 0; }
+  to   { background-position: 44px 44px; }
+}
+
+/* Floating particles */
+.particles {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.particle {
+  position: absolute;
+  width: 2px; height: 2px;
+  border-radius: 50%;
+  background: var(--sky);
+  animation: float linear infinite;
+  opacity: 0;
+}
+
+@keyframes float {
+  0%   { transform: translateY(110vh) translateX(0);  opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.3; }
+  100% { transform: translateY(-10vh) translateX(30px); opacity: 0; }
+}
+
+/* ── Navbar ────────────────────────────────────────────── */
+.navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px clamp(20px, 5vw, 60px);
+  background: rgba(8,14,26,0.8);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  z-index: 1000;
+  animation: navDown 0.6s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes navDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.navbar h2 {
+  color: var(--sky);
+  font-weight: 600;
+  font-size: clamp(15px, 2vw, 20px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Animated radar icon in logo */
+.radar-icon {
+  width: 22px; height: 22px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-icon::before,
+.radar-icon::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid var(--sky);
+}
+
+.radar-icon::before {
+  width: 22px; height: 22px;
+  animation: radarPing 2s ease-out infinite;
+}
+
+.radar-icon::after {
+  width: 10px; height: 10px;
+  background: var(--sky);
+  opacity: 0.8;
+}
+
+@keyframes radarPing {
+  0%   { transform: scale(0.4); opacity: 1; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.nav-links a {
+  color: rgba(255,255,255,0.7);
+  text-decoration: none;
+  margin-left: 25px;
+  font-size: 14px;
+  transition: color 0.25s ease;
+  position: relative;
+}
+
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  bottom: -3px; left: 0; right: 0;
+  height: 1px;
+  background: var(--sky);
+  transform: scaleX(0);
+  transition: transform 0.25s ease;
+}
+
+.nav-links a:hover { color: var(--sky); }
+.nav-links a:hover::after { transform: scaleX(1); }
+
+/* ── Container ─────────────────────────────────────────── */
+.dashboard-container {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: clamp(110px, 14vw, 150px) clamp(16px, 4vw, 50px) 80px;
+  animation: containerUp 0.9s 0.15s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes containerUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Hero title ────────────────────────────────────────── */
+.hero {
+  text-align: center;
+  margin-bottom: clamp(28px, 5vw, 50px);
+  position: relative;
+}
+
+.hero-tag {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--sky);
+  border: 1px solid rgba(56,189,248,0.3);
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin-bottom: 18px;
+  animation: tagPop 0.5s 0.4s ease both;
+}
+
+@keyframes tagPop {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+.hero h1 {
+  font-size: clamp(24px, 4vw, 38px);
+  font-weight: 600;
+  line-height: 1.25;
+  margin-bottom: 14px;
+  background: linear-gradient(135deg, #fff 40%, var(--sky));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero p {
+  color: rgba(255,255,255,0.5);
+  font-size: clamp(13px, 1.5vw, 15px);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ── Glass card ────────────────────────────────────────── */
+.glass-card {
+  background: var(--card);
+  backdrop-filter: blur(24px);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  padding: clamp(24px, 4vw, 44px);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.glass-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sky), transparent);
+  opacity: 0.5;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 40px 90px rgba(0,0,0,0.7), 0 0 35px rgba(56,189,248,0.06);
+}
+
+/* ── Features ──────────────────────────────────────────── */
+.features {
+  display: flex;
+  justify-content: space-between;
+  gap: clamp(12px, 2vw, 22px);
+  margin-bottom: clamp(24px, 4vw, 40px);
+  flex-wrap: wrap;
+}
+
+.feature {
+  flex: 1;
+  min-width: min(140px, 100%);
+  background: rgba(255,255,255,0.035);
+  padding: clamp(16px, 2.5vw, 24px) 16px;
+  border-radius: 14px;
+  text-align: center;
+  border: 1px solid var(--border);
+  transition: transform 0.35s ease, box-shadow 0.35s ease, background 0.35s ease, border-color 0.35s ease;
+  animation: featureIn 0.6s ease both;
+  cursor: default;
+}
+
+.feature:nth-child(1) { animation-delay: 0.3s; }
+.feature:nth-child(2) { animation-delay: 0.45s; }
+.feature:nth-child(3) { animation-delay: 0.6s; }
+
+@keyframes featureIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.feature:hover {
+  transform: translateY(-6px);
+  background: var(--sky-dim);
+  border-color: rgba(56,189,248,0.3);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5), 0 0 20px rgba(56,189,248,0.1);
+}
+
+.feature-icon {
+  width: 52px; height: 52px;
+  margin: 0 auto 14px;
+  border-radius: 14px;
+  background: rgba(56,189,248,0.1);
+  border: 1px solid rgba(56,189,248,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.feature:hover .feature-icon {
+  transform: rotate(8deg) scale(1.1);
+}
+
+.feature-icon i {
+  font-size: 22px;
+  color: var(--sky);
+}
+
+.feature h3 {
+  font-size: clamp(13px, 1.5vw, 15px);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.feature p {
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+}
+
+/* ── Upload zone ───────────────────────────────────────── */
+.upload-container {
+  position: relative;
+  border: 2px dashed rgba(56,189,248,0.4);
+  padding: clamp(36px, 6vw, 60px) 30px;
+  text-align: center;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  background: rgba(56,189,248,0.02);
+  overflow: hidden;
+}
+
+.upload-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 120%, rgba(56,189,248,0.08), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.upload-container:hover {
+  background: var(--sky-dim);
+  border-color: var(--sky);
+  box-shadow: 0 0 30px rgba(56,189,248,0.1), inset 0 0 30px rgba(56,189,248,0.04);
+}
+
+.upload-container:hover::before { opacity: 1; }
+
+/* Animated corner brackets */
+.upload-container .corner {
+  position: absolute;
+  width: 20px; height: 20px;
+  border-color: var(--sky);
+  border-style: solid;
+  opacity: 0.6;
+  transition: width 0.3s ease, height 0.3s ease, opacity 0.3s ease;
+}
+
+.upload-container:hover .corner { width: 28px; height: 28px; opacity: 1; }
+
+.corner.tl { top: 10px; left: 10px;  border-width: 2px 0 0 2px; }
+.corner.tr { top: 10px; right: 10px; border-width: 2px 2px 0 0; }
+.corner.bl { bottom: 10px; left: 10px;  border-width: 0 0 2px 2px; }
+.corner.br { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+
+.upload-container input {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Upload icon animation */
+.upload-icon-wrap {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+.upload-icon-wrap i {
+  font-size: clamp(2rem, 5vw, 3rem);
+  color: var(--sky);
+  display: block;
+  animation: iconBounce 2.5s ease-in-out infinite;
+}
+
+@keyframes iconBounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+/* Ripple rings under upload icon */
+.ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(56,189,248,0.35);
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  animation: ringExpand 3s ease-out infinite;
+}
+
+.ring:nth-child(2) { animation-delay: 1s; }
+.ring:nth-child(3) { animation-delay: 2s; }
+
+@keyframes ringExpand {
+  0%   { transform: translate(-50%,-50%) scale(0.3); opacity: 0.8; width: 60px; height: 60px; }
+  100% { transform: translate(-50%,-50%) scale(2.5); opacity: 0;   width: 60px; height: 60px; }
+}
+
+.upload-label {
+  color: rgba(255,255,255,0.65);
+  font-size: clamp(13px, 1.5vw, 15px);
+  line-height: 1.8;
+  position: relative;
+  z-index: 1;
+}
+
+.upload-label span {
+  color: var(--sky);
+  font-weight: 600;
+}
+
+/* Format pills */
+.format-pills {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.pill {
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(56,189,248,0.25);
+  color: rgba(56,189,248,0.7);
+  background: rgba(56,189,248,0.05);
+}
+
+/* ── Image preview ─────────────────────────────────────── */
+#image-preview {
+  display: none;
+  margin-top: 24px;
+  max-width: 100%;
+  border-radius: 14px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 0 1px rgba(56,189,248,0.15);
+  animation: previewReveal 0.5s ease both;
+}
+
+@keyframes previewReveal {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Submit button ─────────────────────────────────────── */
+.submit-btn {
+  width: 100%;
+  padding: clamp(13px, 2vw, 17px);
+  margin-top: 24px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  color: white;
+  font-size: clamp(14px, 1.5vw, 16px);
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 6px 28px rgba(56,189,248,0.3);
+}
+
+/* Shimmer sweep */
+.submit-btn::before {
+  content: "";
+  position: absolute;
+  top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { left: -100%; }
+  100% { left: 180%; }
+}
+
+.submit-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(56,189,248,0.5);
+}
+
+.submit-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ── Responsive ────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .features { flex-direction: column; }
+  .feature  { min-width: 100%; }
+  .nav-links a { margin-left: 14px; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- Background layers -->
+<div class="bg-layer"></div>
+<div class="bg-grid"></div>
+
+<!-- Floating particles -->
+<div class="particles" id="particles"></div>
+
+<!-- Navbar -->
+<div class="navbar">
+  <a href="{{ url_for('home') }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--sky);font-weight:700;font-size:clamp(14px,2vw,18px);">
+    <span class="radar-icon"></span>
+    CAR DAMAGE DETECTION
+  </a>
+  <div class="nav-links">
+    <a href="{{ url_for('profile') }}">Profile</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+  </div>
+</div>
+
+<!-- Main content -->
+<div class="dashboard-container">
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-tag">YOLOv8 Powered · Real-time Analysis</div>
+    <h1>Vehicle Damage Analysis</h1>
+    <p>Upload a vehicle image and let our AI detect damaged parts and estimate repair costs instantly.</p>
+  </div>
+
+  <!-- Glass card -->
+  <div class="glass-card">
+
+    <!-- Feature cards -->
+    <div class="features">
+      <div class="feature">
+        <div class="feature-icon"><i class="fas fa-tachometer-alt"></i></div>
+        <h3>Fast Analysis</h3>
+        <p>Results in seconds</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon"><i class="fas fa-bullseye"></i></div>
+        <h3>High Accuracy</h3>
+        <p>YOLOv8 Powered</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon"><i class="fas fa-dollar-sign"></i></div>
+        <h3>Cost Estimation</h3>
+        <p>Instant Quotes</p>
+      </div>
+    </div>
+
+    <!-- Upload form -->
+    <form action="{{ url_for('dashboard') }}" method="POST" enctype="multipart/form-data">
+
+      <div class="upload-container" id="dropzone">
+        <!-- Corner brackets -->
+        <div class="corner tl"></div>
+        <div class="corner tr"></div>
+        <div class="corner bl"></div>
+        <div class="corner br"></div>
+
+        <!-- Animated icon -->
+        <div class="upload-icon-wrap">
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <i class="fas fa-car-crash"></i>
+        </div>
+
+        <div class="upload-label">
+          <span>Drag &amp; Drop</span> your vehicle image here<br>
+          or <span>click to upload</span>
+        </div>
+
+        <div class="format-pills">
+          <span class="pill">JPG</span>
+          <span class="pill">PNG</span>
+          <span class="pill">WEBP</span>
+        </div>
+
+        <input type="file" id="file-upload" name="image" accept="image/*" onchange="handleFileUpload(event)" required>
+      </div>
+
+      <img id="image-preview" src="#" alt="Preview">
+
+      <button class="submit-btn" type="submit">
+        <i class="fas fa-search" style="margin-right:8px;"></i>
+        Estimate Repair Price
+      </button>
+
+    </form>
+
+  </div>
+</div>
+
+<script>
+/* ── Particles ── */
+(function () {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 28; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText = `
+      left: ${Math.random() * 100}%;
+      width: ${Math.random() * 2.5 + 1}px;
+      height: ${Math.random() * 2.5 + 1}px;
+      animation-duration: ${Math.random() * 14 + 10}s;
+      animation-delay: ${Math.random() * 12}s;
+      opacity: ${Math.random() * 0.5 + 0.1};
+    `;
+    container.appendChild(p);
+  }
+})();
+
+/* ── Drag-over highlight ── */
+const dropzone = document.getElementById('dropzone');
+['dragenter','dragover'].forEach(e => dropzone.addEventListener(e, () => {
+  dropzone.style.borderColor = '#38bdf8';
+  dropzone.style.background  = 'rgba(56,189,248,0.1)';
+}));
+['dragleave','drop'].forEach(e => dropzone.addEventListener(e, () => {
+  dropzone.style.borderColor = '';
+  dropzone.style.background  = '';
+}));
+
+/* ── File upload preview ── */
+function handleFileUpload(event) {
+  const fileInput = event.target;
+  const preview   = document.getElementById('image-preview');
+
+  if (fileInput.files.length > 0) {
+    const file   = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = function (e) {
+      preview.src = e.target.result;
+      preview.style.display = 'block';
+    };
+
+    reader.readAsDataURL(file);
+  }
+}
+</script>
+
+</body>
+</html>

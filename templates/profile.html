@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Profile · CAR DAMAGE DETECTION</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+<style>
+/* ── Reset & Variables ─────────────────────────────── */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+
+:root {
+  --sky:        #38bdf8;
+  --sky-bright: #7dd3fc;
+  --sky-glow:   rgba(56,189,248,0.22);
+  --sky-dim:    rgba(56,189,248,0.07);
+  --sky-border: rgba(56,189,248,0.22);
+  --green:      #22c55e;
+  --bg:         #070d18;
+  --card:       rgba(255,255,255,0.038);
+  --border:     rgba(255,255,255,0.07);
+  --text:       #f1f5f9;
+  --muted:      rgba(255,255,255,0.42);
+}
+
+html { scroll-behavior:smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  opacity: 0;
+  animation: bodyIn 0.8s ease forwards;
+}
+
+@keyframes bodyIn { to { opacity:1; } }
+
+/* ── Canvas ──────────────────────────────────────── */
+canvas {
+  position: fixed; inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ── BG layers ───────────────────────────────────── */
+.bg-base {
+  position: fixed; inset: 0; z-index: -3;
+  background:
+    radial-gradient(ellipse 70% 55% at 12% 8%,  rgba(56,189,248,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 60% at 88% 92%, rgba(14,165,233,0.06) 0%, transparent 60%),
+    #070d18;
+}
+
+.bg-grid {
+  position: fixed; inset: 0; z-index: -2;
+  background-image:
+    linear-gradient(rgba(56,189,248,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  animation: gridPan 70s linear infinite;
+}
+
+@keyframes gridPan {
+  from { background-position: 0 0; }
+  to   { background-position: 44px 44px; }
+}
+
+/* ── Navbar ──────────────────────────────────────── */
+.navbar {
+  position: fixed; top:0; left:0; right:0;
+  display: flex; justify-content:space-between; align-items:center;
+  padding: 16px clamp(20px,5vw,60px);
+  background: rgba(7,13,24,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  z-index: 1000;
+  animation: navDown 0.65s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes navDown {
+  from { transform:translateY(-100%); opacity:0; }
+  to   { transform:translateY(0);     opacity:1; }
+}
+
+.brand {
+  display:flex; align-items:center; gap:10px;
+  color:var(--sky); font-weight:600;
+  font-size: clamp(14px,2vw,18px);
+  letter-spacing:.3px;
+}
+
+.radar { width:20px;height:20px;position:relative;display:inline-flex;align-items:center;justify-content:center; }
+.radar::before,.radar::after { content:"";position:absolute;border-radius:50%;border:1.5px solid var(--sky); }
+.radar::before { width:20px;height:20px;animation:ping 2s ease-out infinite; }
+.radar::after  { width:8px;height:8px;background:var(--sky); }
+@keyframes ping { 0%{transform:scale(.4);opacity:1;} 100%{transform:scale(1.9);opacity:0;} }
+
+.nav-right { display:flex;align-items:center;gap:8px; }
+
+.nav-btn {
+  display:inline-flex;align-items:center;gap:7px;
+  padding:7px 16px; border-radius:8px;
+  font-size:13px; font-weight:500;
+  text-decoration:none;
+  transition:background .25s,color .25s,transform .2s;
+  color:var(--muted); border:1px solid transparent;
+}
+.nav-btn:hover { color:var(--sky);background:var(--sky-dim);border-color:var(--sky-border); }
+.nav-btn.danger:hover { color:#f87171;background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.2); }
+
+/* ── Page wrapper ────────────────────────────────── */
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(100px,13vw,135px) clamp(16px,4vw,48px) 80px;
+}
+
+/* ── Cover ───────────────────────────────────────── */
+.cover {
+  height: clamp(150px,18vw,210px);
+  border-radius: 22px 22px 0 0;
+  position: relative; overflow:hidden;
+  background: linear-gradient(125deg, rgba(56,189,248,0.14) 0%, rgba(7,13,24,0.5) 100%);
+  border:1px solid var(--sky-border); border-bottom:none;
+  animation: slideUp .8s .1s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(30px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.cover::before {
+  content:""; position:absolute; inset:0;
+  background-image:
+    linear-gradient(rgba(56,189,248,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,0.07) 1px, transparent 1px);
+  background-size:28px 28px;
+}
+
+.cover-sweep {
+  position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.1) 50%, transparent 100%);
+  animation:sweep 4s ease-in-out infinite;
+}
+@keyframes sweep { 0%{transform:translateX(-100%);} 100%{transform:translateX(200%);} }
+
+.hud { position:absolute;width:26px;height:26px;border-color:rgba(56,189,248,0.55);border-style:solid; }
+.hud.tl { top:12px;left:12px;  border-width:2px 0 0 2px; }
+.hud.tr { top:12px;right:12px; border-width:2px 2px 0 0; }
+.hud.bl { bottom:12px;left:12px;  border-width:0 0 2px 2px; }
+.hud.br { bottom:12px;right:12px; border-width:0 2px 2px 0; }
+
+.cover-title {
+  position:absolute; bottom:20px; right:28px; text-align:right; pointer-events:none;
+}
+.cover-title span { font-size:11px;letter-spacing:2.5px;text-transform:uppercase;color:rgba(56,189,248,0.6); }
+.cover-title p {
+  font-size:clamp(18px,2.5vw,26px);font-weight:700;
+  background:linear-gradient(135deg,#fff 40%,var(--sky));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+
+/* ── Avatar ──────────────────────────────────────── */
+.avatar-wrap {
+  position:absolute; bottom:-54px; left:clamp(22px,5vw,48px);
+  width:110px; height:110px;
+}
+
+.avatar-wrap svg {
+  position:absolute; inset:0; width:110px; height:110px;
+  animation:rotateSvg 10s linear infinite;
+}
+@keyframes rotateSvg { to { transform:rotate(360deg); } }
+
+.avatar-inner {
+  position:absolute; inset:8px; border-radius:50%;
+  background:linear-gradient(135deg,#0c4a6e,#0ea5e9);
+  border:3px solid var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  font-size:36px;
+  box-shadow:0 0 28px rgba(56,189,248,0.4);
+  animation:avatarGlow 3s ease-in-out infinite;
+}
+@keyframes avatarGlow {
+  0%,100% { box-shadow:0 0 20px rgba(56,189,248,0.3); }
+  50%      { box-shadow:0 0 44px rgba(56,189,248,0.6); }
+}
+
+.online-dot {
+  position:absolute; bottom:10px; right:8px;
+  width:14px; height:14px; border-radius:50%;
+  background:var(--green); border:2px solid var(--bg);
+  box-shadow:0 0 10px var(--green);
+  animation:dotBlink 2s ease-in-out infinite;
+}
+@keyframes dotBlink { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+/* ── Identity bar ────────────────────────────────── */
+.identity-bar {
+  background:var(--card); backdrop-filter:blur(26px);
+  border:1px solid var(--sky-border);
+  border-radius:0 0 22px 22px;
+  padding: clamp(54px,7vw,72px) clamp(24px,4vw,48px) clamp(20px,3vw,32px);
+  display:flex; align-items:flex-end; justify-content:space-between;
+  flex-wrap:wrap; gap:20px; margin-bottom:28px;
+  position:relative;
+  box-shadow:0 30px 70px rgba(0,0,0,0.55);
+  animation:slideUp .8s .18s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.name-block h2 {
+  font-size:clamp(19px,2.5vw,26px); font-weight:700;
+  background:linear-gradient(135deg,#fff 35%,var(--sky));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:6px;
+}
+
+.badge-row { display:flex;flex-wrap:wrap;gap:8px; }
+
+.badge {
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:11px;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--sky); border:1px solid var(--sky-border);
+  padding:4px 12px; border-radius:20px; background:var(--sky-dim);
+}
+.badge.green { color:#4ade80;border-color:rgba(74,222,128,0.25);background:rgba(74,222,128,0.07); }
+
+.stat-chips { display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end; }
+
+.stat-chip {
+  display:flex;flex-direction:column;align-items:center;
+  background:rgba(255,255,255,0.04); border:1px solid var(--border);
+  border-radius:14px; padding:12px 20px; min-width:90px;
+  transition:background .25s,border-color .25s,transform .25s; cursor:default;
+}
+.stat-chip:hover { background:var(--sky-dim);border-color:var(--sky-border);transform:translateY(-3px); }
+.stat-chip .val  { font-size:22px;font-weight:700;color:var(--sky);line-height:1; }
+.stat-chip .lbl  { font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:4px; }
+
+/* ── Info pills ──────────────────────────────────── */
+.pills-strip {
+  display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px;
+  animation:slideUp .8s .28s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.pill {
+  display:inline-flex;align-items:center;gap:9px;
+  background:var(--card); border:1px solid var(--border);
+  padding:9px 18px; border-radius:30px;
+  font-size:13px; color:rgba(255,255,255,0.65);
+  transition:background .25s,border-color .25s,transform .25s,color .25s; cursor:default;
+}
+.pill:hover { background:var(--sky-dim);border-color:var(--sky-border);transform:translateY(-2px);color:#f1f5f9; }
+.pill i { color:var(--sky);font-size:12px; }
+
+/* ── Forms grid ──────────────────────────────────── */
+.forms-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:clamp(16px,2.5vw,26px);
+}
+
+/* ── Form card ───────────────────────────────────── */
+.fcard {
+  background:var(--card); backdrop-filter:blur(26px);
+  border-radius:20px; border:1px solid var(--border);
+  padding:clamp(22px,3vw,36px);
+  box-shadow:0 28px 65px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.045);
+  position:relative; overflow:hidden;
+  animation:slideUp .8s ease both;
+  transition:transform .35s,box-shadow .35s;
+}
+.fcard:nth-child(1) { animation-delay:.3s; }
+.fcard:nth-child(2) { animation-delay:.44s; }
+
+.fcard::before {
+  content:""; position:absolute; top:0;left:22%;right:22%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--sky),transparent); opacity:.45;
+}
+.fcard::after {
+  content:""; position:absolute;top:0;left:-120%;width:70%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(56,189,248,0.035),transparent);
+  animation:fScan 7s ease-in-out infinite; pointer-events:none;
+}
+@keyframes fScan { 0%{left:-120%;} 100%{left:150%;} }
+.fcard:hover { transform:translateY(-5px);box-shadow:0 40px 80px rgba(0,0,0,0.6),0 0 30px rgba(56,189,248,0.06); }
+
+.fcard-header {
+  display:flex;align-items:center;gap:14px;
+  padding-bottom:22px; border-bottom:1px solid var(--border); margin-bottom:22px;
+}
+
+.fcard-ico {
+  width:46px;height:46px;border-radius:14px;
+  background:rgba(56,189,248,0.1);border:1px solid var(--sky-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;color:var(--sky);flex-shrink:0;transition:transform .3s;
+}
+.fcard:hover .fcard-ico { transform:rotate(8deg) scale(1.1); }
+.fcard-header h3 { font-size:clamp(15px,1.8vw,17px);font-weight:600; }
+.fcard-header p  { font-size:12px;color:var(--muted);margin-top:2px; }
+
+/* Inputs */
+.igroup { position:relative;margin-bottom:13px; }
+.igroup label { display:block;font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px; }
+.igroup .iico { position:absolute;left:14px;bottom:13px;color:rgba(56,189,248,0.45);font-size:13px;pointer-events:none;transition:color .25s; }
+
+input {
+  width:100%; padding:12px 14px 12px 38px;
+  border:1px solid var(--border); border-radius:10px;
+  background:rgba(255,255,255,0.035); color:var(--text);
+  font-size:13.5px; outline:none;
+  transition:background .25s,border-color .25s,box-shadow .25s;
+}
+input::placeholder { color:rgba(255,255,255,0.22); }
+input:focus { background:rgba(56,189,248,0.06);border-color:rgba(56,189,248,0.48);box-shadow:0 0 0 3px rgba(56,189,248,0.1); }
+.igroup:focus-within .iico { color:var(--sky); }
+
+.input-row { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+
+.divider {
+  display:flex;align-items:center;gap:12px;
+  margin:18px 0; font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);
+}
+.divider::before,.divider::after { content:"";flex:1;height:1px;background:var(--border); }
+
+/* Button */
+.sbtn {
+  width:100%; padding:13px; margin-top:6px;
+  border:none; border-radius:11px;
+  background:linear-gradient(135deg,#38bdf8,#0ea5e9);
+  color:white; font-size:14px; font-weight:600;
+  cursor:pointer; letter-spacing:.4px; position:relative; overflow:hidden;
+  transition:transform .25s,box-shadow .25s;
+  box-shadow:0 6px 24px rgba(56,189,248,0.28);
+}
+.sbtn::before {
+  content:""; position:absolute;top:0;left:-100%;width:55%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);
+  animation:shimmer 2.6s ease-in-out infinite;
+}
+@keyframes shimmer { 0%{left:-100%;} 100%{left:190%;} }
+.sbtn:hover  { transform:translateY(-2px);box-shadow:0 12px 36px rgba(56,189,248,0.44); }
+.sbtn:active { transform:scale(.97); }
+
+/* Password strength */
+.str-bar { flex:1;height:4px;border-radius:4px;background:rgba(255,255,255,0.08);transition:background .3s; }
+
+/* Status */
+.status {
+  margin-top:12px; font-size:13px; color:var(--green);
+  opacity:0; transition:opacity .4s;
+  display:flex;align-items:center;gap:6px;min-height:20px;
+}
+.status.active { opacity:1; }
+
+/* Flash */
+.flash { position:fixed;inset:0;background:rgba(56,189,248,0.1);opacity:0;pointer-events:none; }
+.flash.active { animation:flashAnim .5s; }
+@keyframes flashAnim { 0%{opacity:.5;} 100%{opacity:0;} }
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width:860px) {
+  .forms-grid { grid-template-columns:1fr; }
+  .stat-chips { display:none; }
+}
+@media (max-width:540px) {
+  .pill       { font-size:12px;padding:8px 13px; }
+  .input-row  { grid-template-columns:1fr; }
+  .cover-title { display:none; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="bg-base"></div>
+<div class="bg-grid"></div>
+<canvas id="particles"></canvas>
+
+<!-- Navbar -->
+<div class="navbar">
+  <a href="{{ url_for('home') }}" class="brand" style="text-decoration:none;">
+    <span class="radar"></span>CAR DAMAGE DETECTION
+  </a>
+  <div class="nav-right">
+    <a class="nav-btn" href="{{ url_for('dashboard') }}"><i class="fas fa-home"></i> Dashboard</a>
+    <a class="nav-btn danger" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="hud tl"></div><div class="hud tr"></div>
+    <div class="hud bl"></div><div class="hud br"></div>
+    <div class="cover-sweep"></div>
+    <div class="cover-title">
+      <span>User Profile</span>
+      <p>{{ user.name }}</p>
+    </div>
+    <!-- Avatar -->
+    <div class="avatar-wrap" style="position:absolute;bottom:-54px;left:clamp(22px,5vw,48px);">
+      <svg viewBox="0 0 110 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="55" cy="55" r="50" stroke="rgba(56,189,248,0.35)" stroke-width="1" stroke-dasharray="6 4"/>
+      </svg>
+      <div class="avatar-inner">👤</div>
+      <div class="online-dot"></div>
+    </div>
+  </div>
+
+  <!-- Identity bar -->
+  <div class="identity-bar">
+    <div class="name-block">
+      <h2>{{ user.name }}</h2>
+      <div class="badge-row">
+        <span class="badge"><i class="fas fa-shield-alt" style="font-size:10px;"></i>Verified User</span>
+        <span class="badge green"><i class="fas fa-circle" style="font-size:7px;"></i>Active</span>
+      </div>
+    </div>
+    <div class="stat-chips">
+      <div class="stat-chip">
+        <span class="val"><i class="fas fa-car" style="font-size:18px;"></i></span>
+        <span class="lbl">{{ vehicle.brand }}</span>
+      </div>
+      <div class="stat-chip">
+        <span class="val" style="font-size:15px;">{{ vehicle.vehicle_number }}</span>
+        <span class="lbl">Plate No.</span>
+      </div>
+      <div class="stat-chip">
+        <span class="val" style="font-size:15px;">{{ vehicle.model }}</span>
+        <span class="lbl">Model</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pills -->
+  <div class="pills-strip">
+    <div class="pill"><i class="fas fa-envelope"></i>{{ user.email }}</div>
+    <div class="pill"><i class="fas fa-phone"></i>{{ user.contact_number }}</div>
+    <div class="pill"><i class="fas fa-car-side"></i>{{ vehicle.brand }} {{ vehicle.model }}</div>
+    <div class="pill"><i class="fas fa-id-badge"></i>{{ vehicle.vehicle_number }}</div>
+  </div>
+
+  <!-- Forms -->
+  <div class="forms-grid">
+
+    <!-- Edit Profile -->
+    <div class="fcard">
+      <div class="fcard-header">
+        <div class="fcard-ico"><i class="fas fa-user-edit"></i></div>
+        <div><h3>Edit Profile</h3><p>Update your personal &amp; vehicle info</p></div>
+      </div>
+      <form method="POST" onsubmit="bootSystem()">
+        <div class="igroup">
+          <label>Full Name</label>
+          <i class="fas fa-user iico"></i>
+          <input type="text" name="name" value="{{ user.name }}" required>
+        </div>
+        <div class="igroup">
+          <label>Contact Number</label>
+          <i class="fas fa-phone iico"></i>
+          <input type="text" name="contact" value="{{ user.contact_number }}" required>
+        </div>
+        <div class="divider">Vehicle Info</div>
+        <div class="input-row">
+          <div class="igroup">
+            <label>Brand</label>
+            <i class="fas fa-car iico"></i>
+            <input type="text" name="brand" value="{{ vehicle.brand }}" required>
+          </div>
+          <div class="igroup">
+            <label>Model</label>
+            <i class="fas fa-cog iico"></i>
+            <input type="text" name="model" value="{{ vehicle.model }}" required>
+          </div>
+        </div>
+        <div class="igroup">
+          <label>Vehicle Number</label>
+          <i class="fas fa-id-card iico"></i>
+          <input type="text" name="vehicle_number" value="{{ vehicle.vehicle_number }}" required>
+        </div>
+        <button class="sbtn" type="submit"><i class="fas fa-save" style="margin-right:8px;"></i>Save Changes</button>
+      </form>
+      <div class="status" id="statusText"><i class="fas fa-check-circle"></i>&nbsp;System Ready ✓</div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="fcard">
+      <div class="fcard-header">
+        <div class="fcard-ico"><i class="fas fa-lock"></i></div>
+        <div><h3>Change Password</h3><p>Keep your account secure</p></div>
+      </div>
+      <form action="/change_password" method="POST" onsubmit="bootSystem()">
+        <div class="igroup">
+          <label>Current Password</label>
+          <i class="fas fa-key iico"></i>
+          <input type="password" name="current_password" placeholder="Enter current password" required>
+        </div>
+        <div class="igroup">
+          <label>New Password</label>
+          <i class="fas fa-lock iico"></i>
+          <input type="password" name="new_password" id="newPwd" placeholder="Enter new password" required>
+        </div>
+
+        <!-- Password strength -->
+        <div style="margin-bottom:16px;">
+          <div style="font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Password Strength</div>
+          <div style="display:flex;gap:5px;">
+            <div class="str-bar" id="s1"></div>
+            <div class="str-bar" id="s2"></div>
+            <div class="str-bar" id="s3"></div>
+            <div class="str-bar" id="s4"></div>
+          </div>
+          <div id="strLabel" style="font-size:11px;color:var(--muted);margin-top:5px;min-height:16px;transition:color .3s;"></div>
+        </div>
+
+        <button class="sbtn" type="submit"><i class="fas fa-shield-alt" style="margin-right:8px;"></i>Update Password</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<div class="flash" id="flash"></div>
+
+<script>
+/* ── Particles (original logic, colour matched) ── */
+const canvas = document.getElementById("particles");
+const ctx    = canvas.getContext("2d");
+canvas.width  = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let particles = [];
+for(let i=0;i<80;i++){
+  particles.push({
+    x:Math.random()*canvas.width,
+    y:Math.random()*canvas.height,
+    r:Math.random()*2,
+    dx:(Math.random()-.5)*.7,
+    dy:(Math.random()-.5)*.7
+  });
+}
+
+function animateParticles(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle="rgba(56,189,248,0.55)";
+  particles.forEach(p=>{
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fill();
+    p.x+=p.dx; p.y+=p.dy;
+    if(p.x<0||p.x>canvas.width)  p.dx*=-1;
+    if(p.y<0||p.y>canvas.height) p.dy*=-1;
+  });
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+window.addEventListener('resize',()=>{ canvas.width=window.innerWidth; canvas.height=window.innerHeight; });
+
+/* ── Boot system effect (original logic, unchanged) ── */
+function bootSystem(){
+  const status = document.getElementById("statusText");
+  const flash  = document.getElementById("flash");
+  status.innerHTML = "⟳ Processing...";
+  status.classList.add("active");
+  setTimeout(()=>{
+    status.innerHTML = '<i class="fas fa-check-circle"></i>&nbsp;System Ready ✓';
+    flash.classList.add("active");
+    setTimeout(()=>{ flash.classList.remove("active"); }, 400);
+  }, 1000);
+}
+
+/* ── Password strength meter ── */
+document.getElementById('newPwd').addEventListener('input', function(){
+  const val   = this.value;
+  const bars  = [s1,s2,s3,s4];
+  const label = document.getElementById('strLabel');
+  let score = 0;
+  if(val.length >= 6)  score++;
+  if(val.length >= 10) score++;
+  if(/[A-Z]/.test(val) && /[0-9]/.test(val)) score++;
+  if(/[^A-Za-z0-9]/.test(val)) score++;
+  const colors = ['#ef4444','#f97316','#facc15','#22c55e'];
+  const labels = ['Weak','Fair','Good','Strong'];
+  bars.forEach((b,i)=>{ b.style.background = i<score ? colors[score-1] : 'rgba(255,255,255,0.08)'; });
+  label.textContent = val.length ? labels[Math.max(0,score-1)] : '';
+  label.style.color = val.length ? colors[Math.max(0,score-1)] : 'var(--muted)';
+});
+</script>
+
+</body>
+</html>

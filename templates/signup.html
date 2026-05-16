@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up · CAR DAMAGE DETECTION</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+
+:root {
+  --sky:        #38bdf8;
+  --sky-dim:    rgba(56,189,248,0.07);
+  --sky-border: rgba(56,189,248,0.22);
+  --bg:         #070d18;
+  --card:       rgba(255,255,255,0.04);
+  --border:     rgba(255,255,255,0.07);
+  --muted:      rgba(255,255,255,0.45);
+  --error:      #f87171;
+  --success:    #4ade80;
+}
+
+html { scroll-behavior:smooth; }
+body { background:var(--bg); color:#f1f5f9; min-height:100vh; overflow-x:hidden; display:flex; }
+
+.bg-base { position:fixed;inset:0;z-index:-3; background:radial-gradient(ellipse 70% 60% at 80% 30%,rgba(56,189,248,0.09) 0%,transparent 60%),#070d18; }
+.bg-grid { position:fixed;inset:0;z-index:-2; background-image:linear-gradient(rgba(56,189,248,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,0.04) 1px,transparent 1px); background-size:44px 44px; animation:gridPan 70s linear infinite; }
+@keyframes gridPan { from{background-position:0 0;} to{background-position:44px 44px;} }
+canvas { position:fixed;inset:0;z-index:-1;pointer-events:none; }
+
+.split { display:flex; width:100vw; min-height:100vh; }
+
+/* LEFT - FORM */
+.left {
+  width:clamp(340px,46vw,560px);
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  padding:clamp(32px,5vw,60px) clamp(24px,4vw,50px);
+  overflow-y:auto;
+  animation:leftIn .8s .1s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes leftIn { from{opacity:0;transform:translateX(-30px);} to{opacity:1;transform:translateX(0);} }
+
+.left-brand-top {
+  position:absolute; top:28px; left:clamp(24px,4vw,48px);
+  display:flex;align-items:center;gap:10px;
+  color:var(--sky);font-weight:700;font-size:16px;text-decoration:none;
+}
+
+/* Radar */
+.radar { width:20px;height:20px;position:relative;display:inline-flex;align-items:center;justify-content:center; }
+.radar::before,.radar::after { content:"";position:absolute;border-radius:50%;border:1.5px solid var(--sky); }
+.radar::before { width:20px;height:20px;animation:ping 2s ease-out infinite; }
+.radar::after  { width:8px;height:8px;background:var(--sky); }
+@keyframes ping { 0%{transform:scale(.4);opacity:1;} 100%{transform:scale(1.9);opacity:0;} }
+
+.form-card {
+  width:100%;
+  background:var(--card); backdrop-filter:blur(28px);
+  border:1px solid var(--border); border-radius:22px;
+  padding:clamp(24px,3.5vw,40px);
+  box-shadow:0 30px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  position:relative; overflow:hidden;
+}
+.form-card::before {
+  content:""; position:absolute; top:0; left:20%; right:20%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--sky),transparent); opacity:.5;
+}
+
+.form-title { font-size:clamp(19px,2.3vw,24px); font-weight:700; margin-bottom:4px;
+  background:linear-gradient(135deg,#fff 40%,var(--sky));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.form-sub { font-size:13px; color:var(--muted); margin-bottom:22px; }
+
+/* Flash messages */
+.flash-msg {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:16px;
+}
+.flash-error   { background:rgba(248,113,113,0.1); border:1px solid rgba(248,113,113,0.3); color:var(--error); }
+.flash-success { background:rgba(74,222,128,0.1);  border:1px solid rgba(74,222,128,0.3);  color:var(--success); }
+
+/* Section dividers */
+.section-divider {
+  display:flex; align-items:center; gap:10px;
+  font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase;
+  color:var(--sky); margin:16px 0 12px;
+}
+.section-divider::before,.section-divider::after { content:""; flex:1; height:1px; background:rgba(56,189,248,0.18); }
+
+/* Two-col grid */
+.input-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+/* Input groups */
+.igroup { position:relative; margin-bottom:10px; }
+.igroup label { display:block; font-size:10px; letter-spacing:1.1px; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
+.igroup .ico  { position:absolute; left:13px; bottom:12px; color:rgba(56,189,248,0.45); font-size:12px; pointer-events:none; transition:color .25s; }
+.igroup .ico.right { left:auto; right:13px; cursor:pointer; }
+.igroup:focus-within .ico { color:var(--sky); }
+
+input[type="email"], input[type="password"], input[type="text"], input[type="tel"] {
+  width:100%; padding:11px 13px 11px 36px;
+  border:1px solid var(--border); border-radius:10px;
+  background:rgba(255,255,255,0.04); color:#f1f5f9;
+  font-size:13px; outline:none;
+  transition:background .25s, border-color .25s, box-shadow .25s;
+}
+input::placeholder { color:rgba(255,255,255,0.22); }
+input:focus { background:rgba(56,189,248,0.06); border-color:rgba(56,189,248,0.48); box-shadow:0 0 0 3px rgba(56,189,248,0.1); }
+
+/* Submit */
+.sbtn {
+  width:100%; padding:13px; margin-top:8px;
+  border:none; border-radius:11px;
+  background:linear-gradient(135deg,#38bdf8,#0ea5e9);
+  color:white; font-size:14px; font-weight:600;
+  cursor:pointer; letter-spacing:.4px;
+  position:relative; overflow:hidden;
+  transition:transform .25s, box-shadow .25s;
+  box-shadow:0 6px 24px rgba(56,189,248,0.28);
+}
+.sbtn::before {
+  content:""; position:absolute; top:0; left:-100%; width:55%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);
+  animation:shimmer 2.5s ease-in-out infinite;
+}
+@keyframes shimmer { 0%{left:-100%;} 100%{left:190%;} }
+.sbtn:hover  { transform:translateY(-2px); box-shadow:0 12px 36px rgba(56,189,248,0.44); }
+.sbtn:active { transform:scale(.97); }
+
+.form-footer { text-align:center; margin-top:16px; font-size:13px; color:var(--muted); }
+.form-footer a { color:var(--sky); text-decoration:none; font-weight:500; }
+.form-footer a:hover { text-decoration:underline; }
+
+/* RIGHT - VISUAL */
+.right {
+  flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;
+  padding:clamp(40px,5vw,70px) clamp(30px,4vw,60px);
+  border-left:1px solid var(--border);
+  position:relative; overflow:hidden;
+}
+
+.right-inner { width:100%; max-width:440px; text-align:center; }
+
+.right-tag {
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:10px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--sky); border:1px solid var(--sky-border);
+  padding:4px 14px; border-radius:20px; background:var(--sky-dim);
+  margin-bottom:20px;
+}
+
+.right-title {
+  font-size:clamp(22px,2.8vw,34px); font-weight:700; line-height:1.2; margin-bottom:14px;
+  background:linear-gradient(135deg,#fff 40%,var(--sky));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+
+.right-sub { font-size:14px; color:var(--muted); line-height:1.7; margin-bottom:32px; }
+
+/* Feature list */
+.feat-list { display:flex; flex-direction:column; gap:12px; text-align:left; }
+.feat-item {
+  display:flex; align-items:center; gap:14px;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:13px 16px;
+  transition:background .25s, border-color .25s, transform .25s;
+}
+.feat-item:hover { background:var(--sky-dim); border-color:var(--sky-border); transform:translateX(4px); }
+.feat-item-icon {
+  width:38px; height:38px; border-radius:10px; flex-shrink:0;
+  background:rgba(56,189,248,0.1); border:1px solid var(--sky-border);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--sky); font-size:16px;
+}
+.feat-item-text h4 { font-size:13px; font-weight:600; margin-bottom:2px; }
+.feat-item-text p  { font-size:11.5px; color:var(--muted); }
+
+/* Animated car mini */
+.mini-car {
+  margin:0 auto 28px;
+  width:200px; position:relative;
+  animation:carFloat 4s ease-in-out infinite;
+}
+@keyframes carFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-10px);} }
+
+/* Scanning bar */
+.scan-wrap { margin-top:20px; text-align:left; }
+.scan-label { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:var(--sky); margin-bottom:7px; }
+.scan-track { height:3px; background:rgba(56,189,248,0.1); border-radius:3px; overflow:hidden; }
+.scan-fill  { height:100%; background:linear-gradient(90deg,#38bdf8,#7dd3fc); border-radius:3px; animation:scanFill 3s ease-in-out infinite; }
+@keyframes scanFill { 0%{width:0%;} 60%{width:80%;} 100%{width:0%;} }
+
+/* Responsive */
+@media(max-width:860px) { .right { display:none; } .left { width:100vw; } }
+@media(max-width:480px) { .input-grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="bg-base"></div>
+<div class="bg-grid"></div>
+<canvas id="cv"></canvas>
+
+<div class="split">
+
+  <!-- LEFT: FORM -->
+  <div class="left" style="position:relative;">
+
+    <a class="left-brand-top" href="{{ url_for('home') }}">
+      <span class="radar"></span>CAR DAMAGE DETECTION
+    </a>
+
+    <div class="form-card" style="margin-top:60px;">
+      <div class="form-title">Create Account</div>
+      <div class="form-sub">Join CAR DAMAGE DETECTION — it's free</div>
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash-msg flash-{{ category }}">
+              <i class="fas fa-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' }}"></i>
+              {{ message }}{% if 'already' in message %} — Please use a different email.{% endif %}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('signup') }}" autocomplete="off">
+
+        <!-- Personal Info -->
+        <div class="section-divider">
+          <i class="fas fa-user" style="font-size:9px;"></i>Personal Information
+        </div>
+
+        <div class="input-grid">
+          <div class="igroup">
+            <label>Full Name</label>
+            <i class="fas fa-user ico"></i>
+            <input type="text" name="full_name" placeholder="Enter full name" autocomplete="off" required>
+          </div>
+          <div class="igroup">
+            <label>Email Address</label>
+            <i class="fas fa-envelope ico"></i>
+            <input type="email" name="email" placeholder="Enter email address" autocomplete="new-email" required>
+          </div>
+        </div>
+
+        <div class="input-grid">
+          <div class="igroup">
+            <label>Phone Number</label>
+            <i class="fas fa-phone ico"></i>
+            <input type="tel" name="phone" placeholder="Enter phone number" autocomplete="off" required>
+          </div>
+          <div class="igroup">
+            <label>Password</label>
+            <i class="fas fa-lock ico"></i>
+            <input type="password" name="password" id="pwd" placeholder="Create a password" autocomplete="new-password" required>
+            <i class="fas fa-eye ico right" onclick="togglePwd()"></i>
+          </div>
+        </div>
+
+        <!-- Vehicle Info -->
+        <div class="section-divider">
+          <i class="fas fa-car" style="font-size:9px;"></i>Vehicle Information
+        </div>
+
+        <div class="input-grid">
+          <div class="igroup">
+            <label>Vehicle ID</label>
+            <i class="fas fa-id-card ico"></i>
+            <input type="text" name="vehicle_id" placeholder="Enter vehicle number" autocomplete="off" required>
+          </div>
+          <div class="igroup">
+            <label>Car Brand</label>
+            <i class="fas fa-car ico"></i>
+            <input type="text" name="car_brand" placeholder="Enter car brand" autocomplete="off" required>
+          </div>
+        </div>
+
+        <div class="input-grid">
+          <div class="igroup">
+            <label>Car Model</label>
+            <i class="fas fa-cog ico"></i>
+            <input type="text" name="car_model" placeholder="Enter car model" autocomplete="off" required>
+          </div>
+          <div class="igroup">
+            <label>Manufacture Year</label>
+            <i class="fas fa-calendar-alt ico"></i>
+            <input type="text" name="manufacture_year" placeholder="Enter year (e.g. 2022)" autocomplete="off" maxlength="4" pattern="[0-9]{4}" required>
+          </div>
+        </div>
+
+        <button class="sbtn" type="submit">
+          <i class="fas fa-user-plus" style="margin-right:8px;"></i>Create Account
+        </button>
+
+      </form>
+
+      <div class="form-footer">
+        Already have an account? <a href="{{ url_for('login') }}">Login</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: VISUAL -->
+  <div class="right">
+    <div class="right-inner">
+
+      <div class="right-tag">
+        <i class="fas fa-shield-alt" style="font-size:9px;"></i>Trusted AI Platform
+      </div>
+
+      <div class="right-title">Smart Vehicle Damage Detection</div>
+      <div class="right-sub">Get instant AI-powered damage reports and repair cost estimates for your vehicle.</div>
+
+      <!-- Mini car animation -->
+      <div class="mini-car">
+        <svg viewBox="0 0 500 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="40" y="130" width="420" height="80" rx="18" fill="rgba(56,189,248,0.07)" stroke="rgba(56,189,248,0.35)" stroke-width="1.5"/>
+          <path d="M120 130 Q140 70 200 65 L310 65 Q360 68 375 130Z" fill="rgba(56,189,248,0.05)" stroke="rgba(56,189,248,0.28)" stroke-width="1.5"/>
+          <path d="M155 128 Q168 85 210 80 L295 80 Q330 85 340 128Z" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.32)" stroke-width="1"/>
+          <rect x="42" y="148" width="38" height="18" rx="4" fill="rgba(56,189,248,0.22)" stroke="rgba(56,189,248,0.65)" stroke-width="1.2"/>
+          <rect x="420" y="148" width="38" height="18" rx="4" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.45)" stroke-width="1.2"/>
+          <circle cx="140" cy="210" r="36" fill="#070d18" stroke="rgba(56,189,248,0.5)" stroke-width="2"/>
+          <circle cx="140" cy="210" r="22" fill="rgba(56,189,248,0.07)" stroke="rgba(56,189,248,0.28)" stroke-width="1.5"/>
+          <circle cx="140" cy="210" r="8" fill="rgba(56,189,248,0.28)"/>
+          <circle cx="360" cy="210" r="36" fill="#070d18" stroke="rgba(56,189,248,0.5)" stroke-width="2"/>
+          <circle cx="360" cy="210" r="22" fill="rgba(56,189,248,0.07)" stroke="rgba(56,189,248,0.28)" stroke-width="1.5"/>
+          <circle cx="360" cy="210" r="8" fill="rgba(56,189,248,0.28)"/>
+          <line x1="245" y1="133" x2="245" y2="205" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+          <ellipse cx="250" cy="246" rx="190" ry="5" fill="rgba(56,189,248,0.05)"/>
+        </svg>
+      </div>
+
+      <!-- Feature list -->
+      <div class="feat-list">
+        <div class="feat-item">
+          <div class="feat-item-icon"><i class="fas fa-tachometer-alt"></i></div>
+          <div class="feat-item-text">
+            <h4>Fast Analysis</h4>
+            <p>Results in under 3 seconds with YOLOv8</p>
+          </div>
+        </div>
+        <div class="feat-item">
+          <div class="feat-item-icon"><i class="fas fa-rupee-sign"></i></div>
+          <div class="feat-item-text">
+            <h4>Accurate Cost Estimation</h4>
+            <p>Brand &amp; model specific repair quotes</p>
+          </div>
+        </div>
+        <div class="feat-item">
+          <div class="feat-item-icon"><i class="fas fa-file-pdf"></i></div>
+          <div class="feat-item-text">
+            <h4>Downloadable Reports</h4>
+            <p>Export full damage reports as PDF</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="scan-wrap">
+        <div class="scan-label">Analyzing Vehicle Damage...</div>
+        <div class="scan-track"><div class="scan-fill"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+cv.width=window.innerWidth; cv.height=window.innerHeight;
+let pts=[];
+for(let i=0;i<70;i++) pts.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.8+.4,dx:(Math.random()-.5)*.5,dy:(Math.random()-.5)*.5});
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='rgba(56,189,248,0.5)';
+  pts.forEach(p=>{ ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill(); p.x+=p.dx;p.y+=p.dy; if(p.x<0||p.x>cv.width)p.dx*=-1; if(p.y<0||p.y>cv.height)p.dy*=-1; });
+  requestAnimationFrame(draw);
+}
+draw();
+window.addEventListener('resize',()=>{ cv.width=window.innerWidth;cv.height=window.innerHeight; });
+
+function togglePwd(){
+  const p=document.getElementById('pwd');
+  p.type=p.type==='password'?'text':'password';
+}
+</script>
+</body>
+</html>

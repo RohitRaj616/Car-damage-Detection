@@ -1,0 +1,21 @@
+# Environment variables
+.env
+
+# Real database config
+config.py
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environment
+venv/
+
+# Uploaded images
+static/uploads/
+
+# YOLO model
+models/
+
+# VS Code settings
+.vscode/

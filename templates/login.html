@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login · CAR DAMAGE DETECTION</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+
+:root {
+  --sky:        #38bdf8;
+  --sky-dim:    rgba(56,189,248,0.07);
+  --sky-border: rgba(56,189,248,0.22);
+  --bg:         #070d18;
+  --card:       rgba(255,255,255,0.04);
+  --border:     rgba(255,255,255,0.07);
+  --muted:      rgba(255,255,255,0.45);
+  --error:      #f87171;
+  --success:    #4ade80;
+}
+
+html { scroll-behavior:smooth; }
+body { background:var(--bg); color:#f1f5f9; min-height:100vh; overflow:hidden; display:flex; }
+
+/* BG */
+.bg-base { position:fixed;inset:0;z-index:-3; background:radial-gradient(ellipse 70% 60% at 20% 30%, rgba(56,189,248,0.09) 0%, transparent 60%), #070d18; }
+.bg-grid { position:fixed;inset:0;z-index:-2; background-image:linear-gradient(rgba(56,189,248,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(56,189,248,0.04) 1px,transparent 1px); background-size:44px 44px; animation:gridPan 70s linear infinite; }
+@keyframes gridPan { from{background-position:0 0;} to{background-position:44px 44px;} }
+canvas { position:fixed;inset:0;z-index:-1;pointer-events:none; }
+
+/* LAYOUT */
+.split { display:flex; width:100vw; min-height:100vh; }
+
+/* LEFT PANEL */
+.left {
+  flex:1; display:flex; flex-direction:column; justify-content:center; align-items:flex-start;
+  padding:clamp(40px,6vw,80px);
+  position:relative; overflow:hidden;
+  border-right:1px solid var(--border);
+}
+
+.left-brand {
+  position:absolute; top:32px; left:clamp(32px,5vw,60px);
+  display:flex; align-items:center; gap:10px;
+  color:var(--sky); font-weight:700; font-size:17px;
+  text-decoration:none;
+}
+.radar { width:20px;height:20px;position:relative;display:inline-flex;align-items:center;justify-content:center; }
+.radar::before,.radar::after { content:"";position:absolute;border-radius:50%;border:1.5px solid var(--sky); }
+.radar::before { width:20px;height:20px;animation:ping 2s ease-out infinite; }
+.radar::after  { width:8px;height:8px;background:var(--sky); }
+@keyframes ping { 0%{transform:scale(.4);opacity:1;} 100%{transform:scale(1.9);opacity:0;} }
+
+/* Animated car canvas on left */
+.car-stage { width:100%; max-width:480px; margin:0 auto; position:relative; }
+
+.car-svg-wrap { width:100%; filter:drop-shadow(0 0 35px rgba(56,189,248,0.25)); animation:carFloat 4s ease-in-out infinite; }
+@keyframes carFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-12px);} }
+
+/* Detection boxes on left car */
+.dbox {
+  position:absolute; border:1.5px solid rgba(56,189,248,0.65);
+  border-radius:4px; background:rgba(56,189,248,0.04);
+  animation:dboxPulse 2.5s ease-in-out infinite;
+}
+.dbox::after {
+  content:attr(data-label); position:absolute; top:-17px; left:0;
+  font-size:9px; color:var(--sky); letter-spacing:.8px; text-transform:uppercase; white-space:nowrap;
+}
+@keyframes dboxPulse { 0%,100%{opacity:.6;} 50%{opacity:1;border-color:rgba(56,189,248,1);} }
+
+/* Scanning beam */
+.scan-beam {
+  position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(180deg,transparent 0%,rgba(56,189,248,0.12) 50%,transparent 100%);
+  animation:scanBeam 3s ease-in-out infinite;
+}
+@keyframes scanBeam { 0%{transform:translateY(-100%);} 100%{transform:translateY(100%);} }
+
+/* Info chips */
+.info-chips { display:flex; gap:10px; flex-wrap:wrap; margin-top:28px; }
+.info-chip {
+  display:inline-flex; align-items:center; gap:7px;
+  background:var(--card); border:1px solid var(--border);
+  padding:7px 14px; border-radius:30px; font-size:12px; color:var(--muted);
+}
+.info-chip i { color:var(--sky); font-size:11px; }
+
+/* Processing bar */
+.proc-bar-wrap { margin-top:22px; width:100%; max-width:340px; }
+.proc-label { font-size:11px; color:var(--sky); letter-spacing:.8px; margin-bottom:8px; }
+.proc-track { height:4px; background:rgba(56,189,248,0.12); border-radius:4px; overflow:hidden; }
+.proc-fill  { height:100%; background:linear-gradient(90deg,#38bdf8,#7dd3fc); border-radius:4px; animation:procAnim 4s ease-in-out infinite; }
+@keyframes procAnim { 0%{width:0%;} 60%{width:85%;} 100%{width:0%;} }
+.proc-text { font-size:11px; color:var(--muted); margin-top:6px; animation:procText 4s ease-in-out infinite; }
+@keyframes procText { 0%,100%{opacity:0;} 20%,80%{opacity:1;} }
+
+/* RIGHT PANEL */
+.right {
+  width:clamp(340px,38vw,480px);
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  padding:clamp(32px,5vw,60px) clamp(24px,4vw,50px);
+  animation:rightIn .8s .1s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes rightIn { from{opacity:0;transform:translateX(30px);} to{opacity:1;transform:translateX(0);} }
+
+.form-card {
+  width:100%;
+  background:var(--card); backdrop-filter:blur(28px);
+  border:1px solid var(--border); border-radius:22px;
+  padding:clamp(28px,4vw,44px);
+  box-shadow:0 30px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
+  position:relative; overflow:hidden;
+}
+.form-card::before {
+  content:""; position:absolute; top:0; left:20%; right:20%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--sky),transparent); opacity:.5;
+}
+
+.form-title { font-size:clamp(20px,2.5vw,26px); font-weight:700; margin-bottom:6px;
+  background:linear-gradient(135deg,#fff 40%,var(--sky));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.form-sub { font-size:13px; color:var(--muted); margin-bottom:28px; }
+
+/* Flash messages */
+.flash-msg {
+  display:flex; align-items:center; gap:8px;
+  padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:18px;
+}
+.flash-error   { background:rgba(248,113,113,0.1);  border:1px solid rgba(248,113,113,0.3);  color:var(--error); }
+.flash-success { background:rgba(74,222,128,0.1);   border:1px solid rgba(74,222,128,0.3);   color:var(--success); }
+
+/* Input groups */
+.igroup { position:relative; margin-bottom:14px; }
+.igroup label { display:block; font-size:10.5px; letter-spacing:1.1px; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+.igroup .ico   { position:absolute; left:14px; bottom:13px; color:rgba(56,189,248,0.45); font-size:13px; pointer-events:none; transition:color .25s; }
+.igroup .ico.right { left:auto; right:14px; cursor:pointer; }
+.igroup:focus-within .ico { color:var(--sky); }
+
+input[type="email"], input[type="password"], input[type="text"] {
+  width:100%; padding:12px 14px 12px 40px;
+  border:1px solid var(--border); border-radius:10px;
+  background:rgba(255,255,255,0.04); color:#f1f5f9;
+  font-size:14px; outline:none;
+  transition:background .25s, border-color .25s, box-shadow .25s;
+}
+input::placeholder { color:rgba(255,255,255,0.22); }
+input:focus { background:rgba(56,189,248,0.06); border-color:rgba(56,189,248,0.48); box-shadow:0 0 0 3px rgba(56,189,248,0.1); }
+
+/* Submit button */
+.sbtn {
+  width:100%; padding:13px; margin-top:6px;
+  border:none; border-radius:11px;
+  background:linear-gradient(135deg,#38bdf8,#0ea5e9);
+  color:white; font-size:14px; font-weight:600;
+  cursor:pointer; letter-spacing:.4px;
+  position:relative; overflow:hidden;
+  transition:transform .25s, box-shadow .25s;
+  box-shadow:0 6px 24px rgba(56,189,248,0.28);
+}
+.sbtn::before {
+  content:""; position:absolute; top:0; left:-100%; width:55%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);
+  animation:shimmer 2.5s ease-in-out infinite;
+}
+@keyframes shimmer { 0%{left:-100%;} 100%{left:190%;} }
+.sbtn:hover  { transform:translateY(-2px); box-shadow:0 12px 36px rgba(56,189,248,0.44); }
+.sbtn:active { transform:scale(.97); }
+
+.form-footer { text-align:center; margin-top:20px; font-size:13px; color:var(--muted); }
+.form-footer a { color:var(--sky); text-decoration:none; font-weight:500; }
+.form-footer a:hover { text-decoration:underline; }
+
+/* Divider */
+.or-line { display:flex; align-items:center; gap:12px; margin:18px 0; color:var(--muted); font-size:12px; }
+.or-line::before,.or-line::after { content:""; flex:1; height:1px; background:var(--border); }
+
+/* Responsive */
+@media(max-width:860px) { .left { display:none; } .right { width:100vw; } }
+</style>
+</head>
+<body>
+
+<div class="bg-base"></div>
+<div class="bg-grid"></div>
+<canvas id="cv"></canvas>
+
+<div class="split">
+
+  <!-- LEFT -->
+  <div class="left">
+    <a class="left-brand" href="{{ url_for('home') }}">
+      <span class="radar"></span>CAR DAMAGE DETECTION
+    </a>
+
+    <div class="car-stage">
+      <!-- Animated car SVG -->
+      <div class="car-svg-wrap">
+        <svg viewBox="0 0 500 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="40" y="130" width="420" height="80" rx="18" fill="rgba(56,189,248,0.07)" stroke="rgba(56,189,248,0.35)" stroke-width="1.5"/>
+          <path d="M120 130 Q140 70 200 65 L310 65 Q360 68 375 130Z" fill="rgba(56,189,248,0.05)" stroke="rgba(56,189,248,0.3)" stroke-width="1.5"/>
+          <path d="M155 128 Q168 85 210 80 L295 80 Q330 85 340 128Z" fill="rgba(56,189,248,0.1)" stroke="rgba(56,189,248,0.35)" stroke-width="1"/>
+          <rect x="42" y="148" width="38" height="18" rx="4" fill="rgba(56,189,248,0.22)" stroke="rgba(56,189,248,0.65)" stroke-width="1.2"/>
+          <rect x="420" y="148" width="38" height="18" rx="4" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.45)" stroke-width="1.2"/>
+          <circle cx="140" cy="210" r="36" fill="#070d18" stroke="rgba(56,189,248,0.5)" stroke-width="2"/>
+          <circle cx="140" cy="210" r="22" fill="rgba(56,189,248,0.07)" stroke="rgba(56,189,248,0.28)" stroke-width="1.5"/>
+          <circle cx="140" cy="210" r="8" fill="rgba(56,189,248,0.28)"/>
+          <circle cx="360" cy="210" r="36" fill="#070d18" stroke="rgba(56,189,248,0.5)" stroke-width="2"/>
+          <circle cx="360" cy="210" r="22" fill="rgba(56,189,248,0.07)" stroke="rgba(56,189,248,0.28)" stroke-width="1.5"/>
+          <circle cx="360" cy="210" r="8" fill="rgba(56,189,248,0.28)"/>
+          <line x1="245" y1="133" x2="245" y2="205" stroke="rgba(56,189,248,0.2)" stroke-width="1"/>
+          <rect x="170" y="165" width="30" height="6" rx="3" fill="rgba(56,189,248,0.28)" stroke="rgba(56,189,248,0.45)" stroke-width="1"/>
+          <rect x="295" y="165" width="30" height="6" rx="3" fill="rgba(56,189,248,0.28)" stroke="rgba(56,189,248,0.45)" stroke-width="1"/>
+          <line x1="20" y1="245" x2="480" y2="245" stroke="rgba(56,189,248,0.12)" stroke-width="1"/>
+          <ellipse cx="250" cy="246" rx="200" ry="5" fill="rgba(56,189,248,0.05)"/>
+        </svg>
+      </div>
+
+      <!-- Scan beam overlay -->
+      <div class="scan-beam"></div>
+
+      <!-- Detection boxes -->
+      <div class="dbox" data-label="Bonnet"     style="top:28%;left:8%;width:20%;height:22%;animation-delay:.2s;"></div>
+      <div class="dbox" data-label="Door"       style="top:42%;left:42%;width:22%;height:26%;animation-delay:.8s;"></div>
+      <div class="dbox" data-label="Headlight"  style="top:38%;right:14%;width:13%;height:14%;animation-delay:1.4s;"></div>
+    </div>
+
+    <!-- Info chips -->
+    <div class="info-chips">
+      <div class="info-chip"><i class="fas fa-bolt"></i>YOLOv8 Powered</div>
+      <div class="info-chip"><i class="fas fa-bullseye"></i>96% Accuracy</div>
+      <div class="info-chip"><i class="fas fa-clock"></i>Real-time</div>
+    </div>
+
+    <!-- Processing bar -->
+    <div class="proc-bar-wrap">
+      <div class="proc-label">SCANNING VEHICLE...</div>
+      <div class="proc-track"><div class="proc-fill"></div></div>
+      <div class="proc-text" id="procTxt">Analyzing Vehicle Damage... 0%</div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    <div class="form-card">
+      <div class="form-title">Welcome Back</div>
+      <div class="form-sub">Sign in to your CAR DAMAGE DETECTION account</div>
+
+      <!-- Flash messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash-msg flash-{{ category }}">
+              <i class="fas fa-{{ 'exclamation-circle' if category == 'error' else 'check-circle' }}"></i>
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('login') }}">
+
+        <div class="igroup">
+          <label>Email Address</label>
+          <i class="fas fa-envelope ico"></i>
+          <input type="email" name="email" placeholder="example@gmail.com" required>
+        </div>
+
+        <div class="igroup">
+          <label>Password</label>
+          <i class="fas fa-lock ico"></i>
+          <input type="password" name="password" id="pwd" placeholder="Enter your password" required>
+          <i class="fas fa-eye ico right" onclick="togglePwd()"></i>
+        </div>
+
+        <button class="sbtn" type="submit">
+          <i class="fas fa-sign-in-alt" style="margin-right:8px;"></i>Access System
+        </button>
+
+      </form>
+
+      <div class="or-line">or</div>
+
+      <div class="form-footer">
+        Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* Particles */
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+cv.width=window.innerWidth; cv.height=window.innerHeight;
+let pts=[];
+for(let i=0;i<70;i++) pts.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.8+.4,dx:(Math.random()-.5)*.5,dy:(Math.random()-.5)*.5});
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='rgba(56,189,248,0.5)';
+  pts.forEach(p=>{ ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill(); p.x+=p.dx;p.y+=p.dy; if(p.x<0||p.x>cv.width)p.dx*=-1; if(p.y<0||p.y>cv.height)p.dy*=-1; });
+  requestAnimationFrame(draw);
+}
+draw();
+window.addEventListener('resize',()=>{ cv.width=window.innerWidth;cv.height=window.innerHeight; });
+
+/* Password toggle */
+function togglePwd(){
+  const p=document.getElementById('pwd');
+  p.type = p.type==='password'?'text':'password';
+}
+
+/* Proc text animation */
+const msgs=['Scanning Vehicle... 35% | YOLOv8 Confidence: 86.8%','Analyzing Vehicle Damage... 62%','Detecting Parts... 79%','Estimating Costs... 94%','Analysis Complete ✓'];
+let mi=0;
+setInterval(()=>{ document.getElementById('procTxt').textContent=msgs[mi%msgs.length]; mi++; },2000);
+</script>
+</body>
+</html>

@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAR DAMAGE DETECTION</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins',sans-serif; }
+
+:root {
+  --sky:        #38bdf8;
+  --sky-dim:    rgba(56,189,248,0.07);
+  --sky-border: rgba(56,189,248,0.22);
+  --green:      #22c55e;
+  --bg:         #070d18;
+  --card:       rgba(255,255,255,0.04);
+  --border:     rgba(255,255,255,0.07);
+  --muted:      rgba(255,255,255,0.45);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: #f1f5f9;
+  min-height: 100vh;
+  overflow-x: hidden;
+  opacity: 0;
+  animation: bodyIn .7s ease forwards;
+}
+@keyframes bodyIn { to { opacity:1; } }
+
+/* BG */
+.bg-base {
+  position:fixed; inset:0; z-index:-3;
+  background:
+    radial-gradient(ellipse 70% 60% at 20% 15%, rgba(56,189,248,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 50% at 80% 85%, rgba(14,165,233,0.06) 0%, transparent 60%),
+    #070d18;
+}
+.bg-grid {
+  position:fixed; inset:0; z-index:-2;
+  background-image:
+    linear-gradient(rgba(56,189,248,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,0.04) 1px, transparent 1px);
+  background-size:44px 44px;
+  animation:gridPan 70s linear infinite;
+}
+@keyframes gridPan { from{background-position:0 0;} to{background-position:44px 44px;} }
+
+canvas { position:fixed; inset:0; z-index:-1; pointer-events:none; }
+
+/* NAVBAR */
+.navbar {
+  position:fixed; top:0; left:0; right:0;
+  display:flex; justify-content:space-between; align-items:center;
+  padding:16px clamp(20px,5vw,60px);
+  background:rgba(7,13,24,0.85);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  z-index:1000;
+  animation:navDown .65s cubic-bezier(0.22,1,0.36,1) both;
+}
+@keyframes navDown { from{transform:translateY(-100%);opacity:0;} to{transform:translateY(0);opacity:1;} }
+
+.brand {
+  display:flex; align-items:center; gap:10px;
+  color:var(--sky); font-weight:700; font-size:clamp(15px,2vw,19px);
+  letter-spacing:.3px; text-decoration:none;
+}
+.radar { width:20px;height:20px;position:relative;display:inline-flex;align-items:center;justify-content:center; flex-shrink:0; }
+.radar::before,.radar::after { content:"";position:absolute;border-radius:50%;border:1.5px solid var(--sky); }
+.radar::before { width:20px;height:20px;animation:ping 2s ease-out infinite; }
+.radar::after  { width:8px;height:8px;background:var(--sky); }
+@keyframes ping { 0%{transform:scale(.4);opacity:1;} 100%{transform:scale(1.9);opacity:0;} }
+
+.nav-links { display:flex; align-items:center; gap:10px; }
+.nav-link {
+  padding:8px 20px; border-radius:9px;
+  font-size:13px; font-weight:500; text-decoration:none;
+  transition:all .25s; letter-spacing:.3px;
+}
+.nav-link.ghost { color:var(--muted); border:1px solid transparent; }
+.nav-link.ghost:hover { color:var(--sky); background:var(--sky-dim); border-color:var(--sky-border); }
+.nav-link.solid {
+  background:linear-gradient(135deg,#38bdf8,#0ea5e9);
+  color:white; border:1px solid transparent;
+  box-shadow:0 4px 16px rgba(56,189,248,0.25);
+}
+.nav-link.solid:hover { transform:translateY(-2px); box-shadow:0 8px 28px rgba(56,189,248,0.4); }
+
+/* HERO */
+.hero {
+  min-height:100vh;
+  display:flex; flex-direction:column;
+  justify-content:center; align-items:flex-start;
+  padding:0 clamp(24px,8vw,120px);
+  position:relative;
+}
+
+.hero-eyebrow {
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:11px; letter-spacing:2.5px; text-transform:uppercase;
+  color:var(--sky); border:1px solid var(--sky-border);
+  padding:5px 16px; border-radius:20px; background:var(--sky-dim);
+  margin-bottom:28px;
+  animation:fadeUp .7s .3s ease both;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(18px);} to{opacity:1;transform:translateY(0);} }
+
+.hero h1 {
+  font-size:clamp(32px,6vw,72px);
+  font-weight:800;
+  line-height:1.1;
+  max-width:760px;
+  margin-bottom:22px;
+  animation:fadeUp .7s .45s ease both;
+}
+.hero h1 .accent {
+  background:linear-gradient(135deg,var(--sky),#7dd3fc);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+
+.hero p {
+  font-size:clamp(14px,1.6vw,18px);
+  color:var(--muted);
+  max-width:520px;
+  line-height:1.75;
+  margin-bottom:38px;
+  animation:fadeUp .7s .6s ease both;
+}
+
+.hero-btns {
+  display:flex; gap:14px; flex-wrap:wrap;
+  animation:fadeUp .7s .75s ease both;
+}
+
+.btn-primary {
+  display:inline-flex; align-items:center; gap:9px;
+  padding:14px 32px; border-radius:12px;
+  background:linear-gradient(135deg,#38bdf8,#0ea5e9);
+  color:white; font-size:15px; font-weight:600;
+  text-decoration:none; border:none; cursor:pointer;
+  box-shadow:0 6px 28px rgba(56,189,248,0.32);
+  position:relative; overflow:hidden;
+  transition:transform .25s, box-shadow .25s;
+}
+.btn-primary::before {
+  content:""; position:absolute; top:0; left:-100%; width:55%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);
+  animation:shimmer 2.5s ease-in-out infinite;
+}
+@keyframes shimmer { 0%{left:-100%;} 100%{left:190%;} }
+.btn-primary:hover { transform:translateY(-3px); box-shadow:0 12px 40px rgba(56,189,248,0.45); }
+
+.btn-outline {
+  display:inline-flex; align-items:center; gap:9px;
+  padding:14px 32px; border-radius:12px;
+  color:var(--sky); font-size:15px; font-weight:600;
+  text-decoration:none; border:1px solid var(--sky-border);
+  background:var(--sky-dim);
+  transition:all .25s;
+}
+.btn-outline:hover { background:rgba(56,189,248,0.12); border-color:rgba(56,189,248,0.45); transform:translateY(-3px); }
+
+/* Floating car SVG illustration */
+.hero-visual {
+  position:absolute;
+  right:clamp(20px,6vw,80px);
+  top:50%; transform:translateY(-50%);
+  width:clamp(260px,38vw,560px);
+  animation:fadeUp .9s .3s ease both;
+  pointer-events:none;
+}
+
+.car-scene {
+  position:relative;
+  width:100%;
+}
+
+.car-svg { width:100%; filter:drop-shadow(0 0 40px rgba(56,189,248,0.3)); animation:carFloat 4s ease-in-out infinite; }
+@keyframes carFloat { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-14px);} }
+
+/* Scan beam on car */
+.car-scan {
+  position:absolute; inset:0;
+  background:linear-gradient(180deg, transparent 0%, rgba(56,189,248,0.15) 50%, transparent 100%);
+  animation:carScan 3s ease-in-out infinite;
+}
+@keyframes carScan { 0%{transform:translateY(-100%);} 100%{transform:translateY(100%);} }
+
+/* Detection boxes floating around car */
+.det-box {
+  position:absolute;
+  border:1.5px solid rgba(56,189,248,0.7);
+  border-radius:4px;
+  background:rgba(56,189,248,0.04);
+  animation:boxPulse 2.5s ease-in-out infinite;
+}
+.det-box::before {
+  content:attr(data-label);
+  position:absolute; top:-18px; left:0;
+  font-size:9px; color:var(--sky); letter-spacing:.8px; text-transform:uppercase; white-space:nowrap;
+}
+.det-box:nth-child(3) { top:20%; left:10%; width:22%; height:18%; animation-delay:.4s; }
+.det-box:nth-child(4) { top:50%; left:50%; width:25%; height:20%; animation-delay:.9s; }
+.det-box:nth-child(5) { top:30%; right:8%; width:18%; height:14%; animation-delay:1.4s; }
+@keyframes boxPulse { 0%,100%{opacity:.6;} 50%{opacity:1;border-color:rgba(56,189,248,1);} }
+
+/* Confidence badge */
+.conf-badge {
+  position:absolute; bottom:8%; left:5%;
+  background:rgba(7,13,24,0.85); backdrop-filter:blur(10px);
+  border:1px solid var(--sky-border);
+  border-radius:10px; padding:8px 14px;
+  font-size:11px; color:var(--sky);
+  animation:confIn 1s 1s ease both;
+}
+@keyframes confIn { from{opacity:0;transform:scale(.85);} to{opacity:1;transform:scale(1);} }
+.conf-badge strong { font-size:18px; display:block; }
+
+/* Accuracy ring */
+.acc-ring {
+  position:absolute; top:5%; right:2%;
+  width:70px; height:70px;
+  animation:confIn 1s 1.2s ease both;
+}
+.acc-ring svg { width:100%; height:100%; }
+.acc-ring .ring-val { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--sky); line-height:1; }
+.acc-ring .ring-lbl { font-size:8px; color:var(--muted); }
+
+/* STATS STRIP */
+.stats-strip {
+  display:flex; gap:clamp(20px,4vw,50px); flex-wrap:wrap;
+  padding:clamp(24px,4vw,44px) clamp(24px,8vw,120px);
+  border-top:1px solid var(--border);
+  animation:fadeUp .7s .9s ease both;
+}
+.stat { display:flex; flex-direction:column; }
+.stat-val { font-size:clamp(22px,3vw,36px); font-weight:800; color:var(--sky); line-height:1; }
+.stat-lbl { font-size:12px; color:var(--muted); margin-top:4px; }
+
+/* FEATURES SECTION */
+.section { padding:clamp(60px,8vw,100px) clamp(24px,8vw,120px); }
+
+.section-tag {
+  display:inline-flex; align-items:center; gap:8px;
+  font-size:11px; letter-spacing:2px; text-transform:uppercase;
+  color:var(--sky); margin-bottom:16px;
+}
+
+.section-title {
+  font-size:clamp(24px,3.5vw,44px); font-weight:700;
+  max-width:600px; line-height:1.2; margin-bottom:14px;
+}
+.section-title .accent {
+  background:linear-gradient(135deg,var(--sky),#7dd3fc);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+}
+.section-sub { color:var(--muted); max-width:480px; font-size:15px; line-height:1.7; margin-bottom:50px; }
+
+.features-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(min(280px,100%), 1fr));
+  gap:clamp(14px,2vw,22px);
+}
+
+.feat-card {
+  background:var(--card);
+  backdrop-filter:blur(20px);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:clamp(22px,3vw,32px);
+  position:relative; overflow:hidden;
+  transition:transform .35s, box-shadow .35s, background .35s, border-color .35s;
+  cursor:default;
+}
+.feat-card::before {
+  content:""; position:absolute; top:0; left:22%; right:22%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--sky),transparent); opacity:.4;
+}
+.feat-card:hover {
+  transform:translateY(-6px);
+  background:rgba(56,189,248,0.06);
+  border-color:var(--sky-border);
+  box-shadow:0 28px 60px rgba(0,0,0,0.5), 0 0 24px rgba(56,189,248,0.08);
+}
+
+.feat-icon {
+  width:52px; height:52px; border-radius:14px;
+  background:rgba(56,189,248,0.1); border:1px solid var(--sky-border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; color:var(--sky);
+  margin-bottom:18px;
+  transition:transform .3s;
+}
+.feat-card:hover .feat-icon { transform:rotate(8deg) scale(1.1); }
+
+.feat-card h3 { font-size:17px; font-weight:600; margin-bottom:8px; }
+.feat-card p  { font-size:13px; color:var(--muted); line-height:1.7; }
+
+/* HOW IT WORKS */
+.steps {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(min(220px,100%), 1fr));
+  gap:clamp(14px,2vw,24px);
+  margin-top:20px;
+}
+
+.step {
+  display:flex; flex-direction:column; align-items:flex-start;
+  background:var(--card); border:1px solid var(--border);
+  border-radius:18px; padding:clamp(20px,3vw,30px);
+  position:relative; overflow:hidden;
+  transition:transform .3s, border-color .3s;
+}
+.step:hover { transform:translateY(-4px); border-color:var(--sky-border); }
+
+.step-num {
+  font-size:clamp(36px,4vw,52px); font-weight:800;
+  background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(56,189,248,0.04));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  line-height:1; margin-bottom:14px; letter-spacing:-2px;
+}
+
+.step h4 { font-size:15px; font-weight:600; margin-bottom:8px; }
+.step p  { font-size:13px; color:var(--muted); line-height:1.65; }
+
+/* CTA BANNER */
+.cta-banner {
+  margin:0 clamp(24px,8vw,120px) clamp(60px,8vw,100px);
+  background:linear-gradient(135deg, rgba(56,189,248,0.12), rgba(14,165,233,0.06));
+  border:1px solid var(--sky-border);
+  border-radius:24px;
+  padding:clamp(36px,5vw,60px) clamp(28px,5vw,60px);
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:24px;
+  position:relative; overflow:hidden;
+}
+.cta-banner::before {
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(90deg, transparent, rgba(56,189,248,0.06), transparent);
+  animation:sweep 5s ease-in-out infinite;
+}
+@keyframes sweep { 0%{transform:translateX(-100%);} 100%{transform:translateX(200%);} }
+
+.cta-banner h2 { font-size:clamp(20px,2.5vw,30px); font-weight:700; max-width:460px; }
+.cta-banner h2 span { color:var(--sky); }
+.cta-banner p { color:var(--muted); font-size:14px; margin-top:8px; }
+
+/* FOOTER */
+footer {
+  border-top:1px solid var(--border);
+  padding:clamp(20px,3vw,32px) clamp(24px,8vw,120px);
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;
+  color:var(--muted); font-size:13px;
+}
+footer a { color:var(--sky); text-decoration:none; }
+
+/* Scroll reveal */
+.reveal {
+  opacity:0; transform:translateY(28px);
+  transition:opacity .7s ease, transform .7s ease;
+}
+.reveal.visible { opacity:1; transform:translateY(0); }
+
+/* Responsive */
+@media(max-width:900px) {
+  .hero-visual { display:none; }
+  .hero { align-items:center; text-align:center; padding-top:100px; }
+  .hero p, .hero h1 { max-width:100%; }
+  .hero-btns { justify-content:center; }
+  .stats-strip { justify-content:center; padding:24px; }
+  .cta-banner { text-align:center; justify-content:center; }
+}
+@media(max-width:540px) {
+  .nav-link.ghost { display:none; }
+  .features-grid { grid-template-columns:1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-base"></div>
+<div class="bg-grid"></div>
+<canvas id="cv"></canvas>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a class="brand" href="{{ url_for('home') }}">
+    <span class="radar"></span>
+    CAR DAMAGE DETECTION
+  </a>
+  <div class="nav-links">
+    <a class="nav-link ghost" href="{{ url_for('login') }}">Login</a>
+    <a class="nav-link solid" href="{{ url_for('signup') }}">Sign Up</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">
+    <i class="fas fa-bolt" style="font-size:10px;"></i>
+    YOLOv8 Powered · Real-time Detection
+  </div>
+
+  <h1>
+    AI Powered <span class="accent">Vehicle Damage</span> Detection
+  </h1>
+
+  <p>
+    Upload vehicle images and let our intelligent AI system detect damage, analyze severity, and estimate repair costs instantly.
+  </p>
+
+  <div class="hero-btns">
+    <a class="btn-primary" href="{{ url_for('signup') }}">
+      <i class="fas fa-rocket"></i> Get Started
+    </a>
+    <a class="btn-outline" href="{{ url_for('login') }}">
+      <i class="fas fa-sign-in-alt"></i> Login
+    </a>
+  </div>
+
+  <!-- Car visual -->
+  <div class="hero-visual">
+    <div class="car-scene">
+      <!-- SVG Car illustration -->
+      <svg class="car-svg" viewBox="0 0 500 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Car body -->
+        <rect x="40" y="130" width="420" height="80" rx="18" fill="rgba(56,189,248,0.08)" stroke="rgba(56,189,248,0.4)" stroke-width="1.5"/>
+        <!-- Cabin -->
+        <path d="M120 130 Q140 70 200 65 L310 65 Q360 68 375 130Z" fill="rgba(56,189,248,0.06)" stroke="rgba(56,189,248,0.35)" stroke-width="1.5"/>
+        <!-- Windshield -->
+        <path d="M155 128 Q168 85 210 80 L295 80 Q330 85 340 128Z" fill="rgba(56,189,248,0.12)" stroke="rgba(56,189,248,0.4)" stroke-width="1"/>
+        <!-- Headlights -->
+        <rect x="42" y="148" width="38" height="18" rx="4" fill="rgba(56,189,248,0.25)" stroke="rgba(56,189,248,0.7)" stroke-width="1.2"/>
+        <rect x="420" y="148" width="38" height="18" rx="4" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.5)" stroke-width="1.2"/>
+        <!-- Light beams -->
+        <path d="M80 157 L130 148 L130 165 Z" fill="rgba(56,189,248,0.06)" stroke="rgba(56,189,248,0.2)" stroke-width=".5"/>
+        <!-- Wheels -->
+        <circle cx="140" cy="210" r="36" fill="rgba(15,23,42,1)" stroke="rgba(56,189,248,0.5)" stroke-width="2"/>
+        <circle cx="140" cy="210" r="22" fill="rgba(56,189,248,0.08)" stroke="rgba(56,189,248,0.3)" stroke-width="1.5"/>
+        <circle cx="140" cy="210" r="8" fill="rgba(56,189,248,0.3)"/>
+        <circle cx="360" cy="210" r="36" fill="rgba(15,23,42,1)" stroke="rgba(56,189,248,0.5)" stroke-width="2"/>
+        <circle cx="360" cy="210" r="22" fill="rgba(56,189,248,0.08)" stroke="rgba(56,189,248,0.3)" stroke-width="1.5"/>
+        <circle cx="360" cy="210" r="8" fill="rgba(56,189,248,0.3)"/>
+        <!-- Door lines -->
+        <line x1="245" y1="133" x2="245" y2="205" stroke="rgba(56,189,248,0.25)" stroke-width="1"/>
+        <!-- Door handle -->
+        <rect x="170" y="165" width="30" height="6" rx="3" fill="rgba(56,189,248,0.3)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
+        <rect x="295" y="165" width="30" height="6" rx="3" fill="rgba(56,189,248,0.3)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
+        <!-- Ground line -->
+        <line x1="20" y1="245" x2="480" y2="245" stroke="rgba(56,189,248,0.15)" stroke-width="1"/>
+        <!-- Ground glow -->
+        <ellipse cx="250" cy="246" rx="200" ry="6" fill="rgba(56,189,248,0.06)"/>
+        <!-- Grid lines on bonnet -->
+        <line x1="85" y1="135" x2="115" y2="135" stroke="rgba(56,189,248,0.2)" stroke-width=".8"/>
+        <line x1="88" y1="140" x2="112" y2="140" stroke="rgba(56,189,248,0.15)" stroke-width=".8"/>
+        <line x1="91" y1="145" x2="109" y2="145" stroke="rgba(56,189,248,0.1)" stroke-width=".8"/>
+      </svg>
+
+      <!-- Detection boxes -->
+      <div class="det-box" data-label="Bonnet" style="top:30%;left:8%;width:20%;height:22%;"></div>
+      <div class="det-box" data-label="Door" style="top:40%;left:40%;width:22%;height:28%;"></div>
+      <div class="det-box" data-label="Light" style="top:38%;right:12%;width:14%;height:16%;"></div>
+
+      <!-- Confidence badge -->
+      <div class="conf-badge">
+        <strong>86.8%</strong>
+        YOLOv8 Confidence
+      </div>
+
+      <!-- Accuracy ring -->
+      <div class="acc-ring">
+        <svg viewBox="0 0 70 70">
+          <circle cx="35" cy="35" r="28" fill="none" stroke="rgba(56,189,248,0.12)" stroke-width="4"/>
+          <circle cx="35" cy="35" r="28" fill="none" stroke="#38bdf8" stroke-width="4"
+            stroke-dasharray="150" stroke-dashoffset="20" stroke-linecap="round"
+            transform="rotate(-90 35 35)"/>
+        </svg>
+        <div class="ring-val">96%<span class="ring-lbl">Accuracy</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-strip reveal">
+  <div class="stat"><span class="stat-val">96%</span><span class="stat-lbl">Detection Accuracy</span></div>
+  <div class="stat"><span class="stat-val">&lt;3s</span><span class="stat-lbl">Analysis Time</span></div>
+  <div class="stat"><span class="stat-val">7+</span><span class="stat-lbl">Car Parts Detected</span></div>
+  <div class="stat"><span class="stat-val">6+</span><span class="stat-lbl">Car Brands Supported</span></div>
+</div>
+
+<!-- FEATURES -->
+<section class="section">
+  <div class="section-tag reveal"><i class="fas fa-star" style="font-size:10px;"></i> Core Features</div>
+  <h2 class="section-title reveal">Why Choose <span class="accent">Our System?</span></h2>
+  <p class="section-sub reveal">Advanced AI technology combined with an intuitive interface to give you instant, accurate damage assessments.</p>
+
+  <div class="features-grid">
+    <div class="feat-card reveal">
+      <div class="feat-icon"><i class="fas fa-tachometer-alt"></i></div>
+      <h3>Instant AI Damage Detection</h3>
+      <p>Our YOLOv8 model analyzes vehicle images in under 3 seconds, identifying damaged parts with high precision.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon"><i class="fas fa-rupee-sign"></i></div>
+      <h3>Accurate Cost Estimation</h3>
+      <p>Get instant repair cost estimates based on real market data for your specific car brand and model.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon"><i class="fas fa-brain"></i></div>
+      <h3>Advanced YOLO Based Model</h3>
+      <p>Powered by YOLOv8, the latest in object detection technology, trained specifically for vehicle damage recognition.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon"><i class="fas fa-file-pdf"></i></div>
+      <h3>Detailed PDF Reports</h3>
+      <p>Download comprehensive damage reports with part-by-part breakdown and cost estimates in one click.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon"><i class="fas fa-car"></i></div>
+      <h3>Multi-Brand Support</h3>
+      <p>Supports Honda, Maruti Suzuki, Toyota, Hyundai, Nissan, Skoda and more with model-specific pricing.</p>
+    </div>
+    <div class="feat-card reveal">
+      <div class="feat-icon"><i class="fas fa-history"></i></div>
+      <h3>Report History</h3>
+      <p>Access all your previous damage reports anytime through your personal profile dashboard.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section" style="padding-top:0;">
+  <div class="section-tag reveal"><i class="fas fa-list-ol" style="font-size:10px;"></i> Process</div>
+  <h2 class="section-title reveal">How It <span class="accent">Works</span></h2>
+  <p class="section-sub reveal">Three simple steps to get your complete vehicle damage report.</p>
+
+  <div class="steps">
+    <div class="step reveal">
+      <div class="step-num">01</div>
+      <h4><i class="fas fa-upload" style="color:var(--sky);margin-right:8px;font-size:14px;"></i>Upload Image</h4>
+      <p>Upload a clear photo of your vehicle. Our system accepts JPG, PNG and WEBP formats.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">02</div>
+      <h4><i class="fas fa-search" style="color:var(--sky);margin-right:8px;font-size:14px;"></i>AI Analysis</h4>
+      <p>Our YOLOv8 model scans the image, detects damaged parts, and calculates damage severity instantly.</p>
+    </div>
+    <div class="step reveal">
+      <div class="step-num">03</div>
+      <h4><i class="fas fa-file-invoice-dollar" style="color:var(--sky);margin-right:8px;font-size:14px;"></i>Get Report</h4>
+      <p>Receive a detailed cost estimate report with per-part pricing and download it as PDF.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-banner reveal">
+  <div>
+    <h2>Ready to Detect <span>Vehicle Damage</span> Instantly?</h2>
+    <p>Join hundreds of users who trust our AI for fast, accurate damage assessments.</p>
+  </div>
+  <a class="btn-primary" href="{{ url_for('signup') }}" style="flex-shrink:0;">
+    <i class="fas fa-rocket"></i> Get Started Free
+  </a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="brand" style="font-size:14px;">
+    <span class="radar" style="width:16px;height:16px;"></span>
+    CAR DAMAGE DETECTION
+  </div>
+  <span>© 2026 Car Damage Detection System</span>
+  <div style="display:flex;gap:16px;">
+    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('signup') }}">Sign Up</a>
+  </div>
+</footer>
+
+<script>
+/* Particles */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+cv.width = window.innerWidth; cv.height = window.innerHeight;
+let pts = [];
+for(let i=0;i<70;i++) pts.push({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.8+.4,dx:(Math.random()-.5)*.5,dy:(Math.random()-.5)*.5});
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='rgba(56,189,248,0.5)';
+  pts.forEach(p=>{
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    p.x+=p.dx; p.y+=p.dy;
+    if(p.x<0||p.x>cv.width) p.dx*=-1;
+    if(p.y<0||p.y>cv.height) p.dy*=-1;
+  });
+  requestAnimationFrame(draw);
+}
+draw();
+window.addEventListener('resize',()=>{ cv.width=window.innerWidth; cv.height=window.innerHeight; });
+
+/* Scroll reveal */
+const obs = new IntersectionObserver(entries=>{
+  entries.forEach(e=>{ if(e.isIntersecting) e.target.classList.add('visible'); });
+},{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>

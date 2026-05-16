@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Damage Report · CAR DAMAGE DETECTION</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+/* ─── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after {
+  margin: 0; padding: 0; box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+:root {
+  --sky: #38bdf8;
+  --sky-dim: rgba(56,189,248,0.15);
+  --green: #22c55e;
+  --bg-deep: #0a111f;
+  --bg-card: rgba(255,255,255,0.045);
+  --border: rgba(255,255,255,0.08);
+  --text-muted: rgba(255,255,255,0.55);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg-deep);
+  color: #f1f5f9;
+  min-height: 100vh;
+  overflow-x: hidden;
+  opacity: 0;
+  animation: bodyReveal 0.8s ease forwards;
+}
+
+@keyframes bodyReveal {
+  to { opacity: 1; }
+}
+
+/* ─── Animated mesh background ────────────────────────────── */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -50%;
+  width: 200%; height: 200%;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(56,189,248,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 80% 80%, rgba(34,197,94,0.05) 0%, transparent 70%),
+    radial-gradient(ellipse 80% 80% at 50% 50%, #0f172a 0%, #0a111f 100%);
+  animation: bgDrift 18s ease-in-out infinite alternate;
+  z-index: -2;
+}
+
+@keyframes bgDrift {
+  0%   { transform: translate(0,0) scale(1); }
+  50%  { transform: translate(-3%, -2%) scale(1.02); }
+  100% { transform: translate(-6%, -5%) scale(1.04); }
+}
+
+/* Subtle grid overlay */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(56,189,248,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ─── Navbar ───────────────────────────────────────────────── */
+.navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 5%;
+  background: rgba(10,17,31,0.75);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border);
+  z-index: 1000;
+  animation: navSlideDown 0.6s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes navSlideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+.navbar h2 {
+  color: var(--sky);
+  font-weight: 700;
+  font-size: clamp(15px, 2vw, 19px);
+  letter-spacing: 0.3px;
+}
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--sky);
+  font-weight: 700;
+  font-size: clamp(15px, 2vw, 19px);
+}
+
+.radar-dot {
+  width: 20px; height: 20px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.radar-dot::before, .radar-dot::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid var(--sky);
+}
+.radar-dot::before { width: 20px; height: 20px; animation: radarPingE 2s ease-out infinite; }
+.radar-dot::after  { width: 8px;  height: 8px;  background: var(--sky); }
+@keyframes radarPingE { 0%{transform:scale(.4);opacity:1;} 100%{transform:scale(1.9);opacity:0;} }
+
+.nav-action-btns { display: flex; align-items: center; gap: 8px; }
+.nav-action-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  text-decoration: none;
+  transition: background .25s, color .25s;
+  color: rgba(255,255,255,0.55);
+  border: 1px solid transparent;
+}
+.nav-action-btn:hover { color: var(--sky); background: rgba(56,189,248,0.07); border-color: rgba(56,189,248,0.22); }
+
+/* ─── Layout ───────────────────────────────────────────────── */
+.wrapper {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: clamp(90px, 12vw, 140px) clamp(16px, 4vw, 40px) 80px;
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: clamp(20px, 3vw, 40px);
+}
+
+/* ─── Cards ────────────────────────────────────────────────── */
+.report-card,
+.side-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(28px);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 40px 80px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.report-card {
+  padding: clamp(24px, 4vw, 40px);
+  animation: cardUp 0.8s 0.2s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.side-panel {
+  padding: clamp(20px, 3vw, 30px);
+  animation: cardUp 0.8s 0.4s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes cardUp {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Glowing top edge on cards */
+.report-card::before,
+.side-panel::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sky), transparent);
+  opacity: 0.6;
+}
+
+.report-card:hover,
+.side-panel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 50px 100px rgba(0,0,0,0.8), 0 0 30px rgba(56,189,248,0.05);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+/* ─── Section title ────────────────────────────────────────── */
+.report-card h2,
+.side-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.report-card h2::after,
+.side-panel h3::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border), transparent);
+  margin-left: 12px;
+}
+
+/* ─── Images ───────────────────────────────────────────────── */
+.images {
+  display: flex;
+  gap: clamp(12px, 2vw, 20px);
+  flex-wrap: wrap;
+  margin-bottom: 30px;
+}
+
+.image-box {
+  flex: 1;
+  min-width: min(280px, 100%);
+  position: relative;
+}
+
+.image-box h4 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--sky);
+  margin-bottom: 8px;
+}
+
+.image-box img {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  display: block;
+}
+
+.image-box img:hover {
+  transform: scale(1.025);
+  box-shadow: 0 28px 60px rgba(0,0,0,0.75), 0 0 20px rgba(56,189,248,0.12);
+}
+
+/* Scan overlay — more refined pulse */
+.scan-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  border-radius: 12px;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.scan-overlay::before {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--sky), transparent);
+  box-shadow: 0 0 18px 4px rgba(56,189,248,0.6);
+  animation: scanLine 2.5s ease-in-out infinite;
+}
+
+.scan-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(56,189,248,0.02) 2px,
+    rgba(56,189,248,0.02) 4px
+  );
+}
+
+@keyframes scanLine {
+  0%   { top: 0%;   opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* ─── Table ────────────────────────────────────────────────── */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+thead th {
+  background: rgba(56,189,248,0.18);
+  color: var(--sky);
+  padding: 13px 16px;
+  font-size: 13px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+tbody tr {
+  transition: background 0.25s ease;
+  animation: rowFade 0.5s ease both;
+}
+
+tbody tr:nth-child(n) { animation-delay: calc(0.05s * var(--i, 1)); }
+
+@keyframes rowFade {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+tbody tr:hover { background: var(--sky-dim); }
+
+td {
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  color: rgba(255,255,255,0.85);
+}
+
+tbody tr:last-child td { border-bottom: none; }
+
+/* ─── Total ────────────────────────────────────────────────── */
+.total {
+  margin-top: 28px;
+  text-align: center;
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 600;
+  color: var(--sky);
+  padding: 18px;
+  border-radius: 12px;
+  background: var(--sky-dim);
+  border: 1px solid rgba(56,189,248,0.2);
+  position: relative;
+  overflow: hidden;
+  animation: totalPulse 3s ease-in-out infinite;
+}
+
+@keyframes totalPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(56,189,248,0); }
+  50%       { box-shadow: 0 0 20px 4px rgba(56,189,248,0.15); }
+}
+
+/* ─── Buttons ──────────────────────────────────────────────── */
+.btn-row { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn {
+  padding: 11px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background 0.2s ease;
+}
+
+.btn:hover::after { background: rgba(255,255,255,0.1); }
+.btn:active { transform: scale(0.96); }
+
+.print-btn {
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  color: white;
+  box-shadow: 0 4px 20px rgba(56,189,248,0.3);
+}
+
+.print-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(56,189,248,0.45);
+}
+
+.pdf-btn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  box-shadow: 0 4px 20px rgba(34,197,94,0.3);
+}
+
+.pdf-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(34,197,94,0.45);
+}
+
+/* ─── Side panel ───────────────────────────────────────────── */
+.side-panel h3 {
+  font-size: 15px;
+  color: rgba(255,255,255,0.8);
+}
+
+/* ─── History items ────────────────────────────────────────── */
+.history-item {
+  background: rgba(255,255,255,0.035);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  transition: background 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: cardUp 0.6s ease both;
+}
+
+.history-item:nth-child(1) { animation-delay: 0.5s; }
+.history-item:nth-child(2) { animation-delay: 0.65s; }
+.history-item:nth-child(3) { animation-delay: 0.8s; }
+
+.history-item::before {
+  content: "▸";
+  color: var(--sky);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.history-item:hover {
+  background: var(--sky-dim);
+  transform: translateX(4px);
+  border-color: rgba(56,189,248,0.25);
+}
+
+.history-item:hover::before {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ─── Responsive ───────────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .wrapper {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .navbar { padding: 16px 20px; }
+  .btn-row { flex-direction: column; }
+  .btn { width: 100%; text-align: center; }
+  .images { flex-direction: column; }
+  .image-box { min-width: 100%; }
+  thead th, td { font-size: 12px; padding: 10px 10px; }
+  .total { font-size: 18px; }
+}
+
+/* ─── Print styles ─────────────────────────────────────────── */
+@media print {
+  body { background: white; color: black; }
+  .navbar, .scan-overlay, .btn-row { display: none !important; }
+  .wrapper { margin-top: 20px; grid-template-columns: 1fr; }
+  .report-card, .side-panel {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    background: white;
+    color: black;
+  }
+  .report-card::before, .side-panel::before { display: none; }
+  th { background: #38bdf8 !important; -webkit-print-color-adjust: exact; }
+  .total { background: #e0f2fe; color: #0369a1; border-color: #7dd3fc; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="navbar">
+  <a href="{{ url_for('home') }}" class="navbar-brand">
+    <span class="radar-dot"></span>
+    CAR DAMAGE DETECTION
+  </a>
+  <div class="nav-action-btns">
+    <a href="{{ url_for('dashboard') }}" class="nav-action-btn"><i class="fas fa-upload"></i> New Scan</a>
+    <a href="{{ url_for('profile') }}"   class="nav-action-btn"><i class="fas fa-user"></i> Profile</a>
+    <a href="{{ url_for('logout') }}"    class="nav-action-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+  </div>
+</div>
+
+<div class="wrapper">
+
+  <!-- MAIN REPORT -->
+  <div class="report-card">
+
+    <h2>Vehicle Damage Assessment</h2>
+
+    <div class="images">
+      <div class="image-box">
+        <h4>Original</h4>
+        <img src="{{ url_for('static', filename='uploads/' + original_image) }}">
+      </div>
+
+      <div class="image-box">
+        <h4>AI Detection</h4>
+        <img src="{{ url_for('static', filename=detected_image) }}">
+        <div class="scan-overlay"></div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Part</th>
+            <th>Damage %</th>
+            <th>Total (₹)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for part, details in estimates.items() %}
+          <tr>
+            <td>{{ part }}</td>
+            <td>{{ details['damage_percent'] }}%</td>
+            <td>{{ details['total'] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="total">
+      Total Estimated Cost: ₹{{ total_estimate }}
+    </div>
+
+    <div class="btn-row">
+      <button class="btn print-btn" onclick="window.print()">Print</button>
+      <button class="btn pdf-btn" onclick="downloadPDF()">Download PDF</button>
+    </div>
+
+  </div>
+
+  <!-- SIDE PANEL -->
+  <div class="side-panel">
+
+    <h3>Damage Distribution</h3>
+    <canvas id="damageChart"></canvas>
+
+    <h3 style="margin-top:30px;">Recent Reports</h3>
+
+    <div class="history-item">Report #A1023 – ₹{{ total_estimate }}</div>
+    <div class="history-item">Report #A1022 – ₹{{ total_estimate - 2000 if total_estimate > 2000 else total_estimate }}</div>
+    <div class="history-item">Report #A1021 – ₹{{ total_estimate - 3500 if total_estimate > 3500 else total_estimate }}</div>
+
+  </div>
+
+</div>
+
+<script>
+/* Chart */
+const ctx = document.getElementById('damageChart').getContext('2d');
+
+const labels = [
+  {% for part, details in estimates.items() %}
+  "{{ part }}",
+  {% endfor %}
+];
+
+const data = [
+  {% for part, details in estimates.items() %}
+  {{ details['total'] }},
+  {% endfor %}
+];
+
+new Chart(ctx, {
+  type: 'doughnut',
+  data: {
+    labels: labels,
+    datasets: [{
+      data: data,
+      backgroundColor: ['#38bdf8','#22c55e','#facc15','#ef4444','#a855f7','#06b6d4'],
+      borderWidth: 0,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    animation: { animateRotate: true, duration: 1200, easing: 'easeOutQuart' },
+    plugins: {
+      legend: {
+        labels: { color: 'rgba(255,255,255,0.75)', padding: 16, font: { size: 12 } }
+      }
+    }
+  }
+});
+
+/* PDF */
+function downloadPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.text("AutoVision AI Damage Report", 20, 20);
+  doc.text("Total Cost: ₹{{ total_estimate }}", 20, 30);
+  doc.save("AutoVision_Report.pdf");
+}
+</script>
+
+</body>
+</html>
